@@ -1,3 +1,22 @@
+# LOG FILES 
+tb
+log.txt 
+imgui.ini 
+.polyscope.ini
+
+src/tb
+src/log.txt 
+src/imgui.ini 
+src/.polyscope.ini
+
+OpenCap/
+OpenSim/
+SMPL/
+opensim-workspace/
+rendered_videos/
+rgb_videos.zip
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
