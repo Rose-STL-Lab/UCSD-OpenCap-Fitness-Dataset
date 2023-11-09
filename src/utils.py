@@ -17,7 +17,7 @@ sys.path.append(HOME_PATH)
 # Files
 DATASET_PATH = os.path.join(HOME_PATH,'OpenSim') # Path containing all the training data (currently using xyz)
 RENDER_PATH = os.path.join(HOME_PATH,'rendered_videos')
-
+SMPL_PATH = os.path.join(HOME_PATH,'SMPL')
 
 
 # ############################ DATASET CONSTANTS #######################################################
@@ -39,7 +39,7 @@ ROOT_INIT_ROTVEC = np.array([0,np.pi/2,0])
 cuda=True
 
 ############################# LOGGING #######################################################
-DEBUG = True
+DEBUG = False
 class CustomFormatter(logging.Formatter):
 
 	BLACK = '\033[0;30m'
@@ -80,17 +80,17 @@ class CustomFormatter(logging.Formatter):
 def get_logger(sample_name=None):
 	RENDER_PATH = os.getcwd()
 	logger = logging.getLogger(__name__)
-	logger.setLevel(level=logging.DEBUG if DEBUG else logging.INFO)
+	logger.setLevel(level=logging.DEBUG if DEBUG else logging.WARNING)
 
 	handler = logging.FileHandler(os.path.join(RENDER_PATH, "log.txt"))
-	handler.setLevel(level=logging.DEBUG if DEBUG else logging.INFO)
+	handler.setLevel(level=logging.DEBUG if DEBUG else logging.WARNING)
 	formatter = logging.Formatter(
 		'%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 	handler.setFormatter(formatter)
 	logger.addHandler(handler)
 
 	handler = logging.StreamHandler()
-	handler.setLevel(level=logging.DEBUG if DEBUG else logging.INFO)
+	handler.setLevel(level=logging.DEBUG if DEBUG else logging.WARNING)
 	handler.setFormatter(CustomFormatter())
 	logger.addHandler(handler)
 

@@ -173,7 +173,7 @@ def retarget_sample(sample:OpenCapDataLoader,save_path=None):
 	# Forward from the SMPL layer
 	# if DEBUG: 
 		# verts, Jtr, Jtr_offset = smplRetargetter()
-	vis.render_smpl(sample,smplRetargetter,video_dir=None)
+	# vis.render_smpl(sample,smplRetargetter,video_dir=None)
 
 
 
@@ -212,10 +212,10 @@ def retarget_sample(sample:OpenCapDataLoader,save_path=None):
 		# logger.debug(f"LAMBDA OFFSET:{smplRetargetter.cfg.TRAIN.LAMBDA_NORM_OFFSET}")
 		loss = loss_data 
 		loss += loss_data_offset 
-		loss += 1e-8*loss_offset_min  # U
-		loss += loss_temporal_smooth_reg 
+		loss += 10*loss_temporal_smooth_reg 
+		loss += 1e-6*loss_offset_min  # U
 		loss += 0.00001*loss_beta 
-		loss += smplRetargetter.cfg.TRAIN.LAMBDA_TRANS*loss_trans
+		# loss += smplRetargetter.cfg.TRAIN.LAMBDA_TRANS*loss_trans
 
 
 		if epoch % smplRetargetter.cfg.TRAIN.WRITE == 0  or epoch == smplRetargetter.cfg.TRAIN.MAX_EPOCH-1:
@@ -292,8 +292,8 @@ def retarget_sample(sample:OpenCapDataLoader,save_path=None):
 		writer.add_scalar(f"RAnkle-Y", float(smplRetargetter.smpl_params['pose_params'][i,8*3 + 1]),i )
 		writer.add_scalar(f"RAnkle-X", float(smplRetargetter.smpl_params['pose_params'][i,8*3 + 2]),i )
 
-	video_dir = os.path.join(RENDER_PATH,f"{sample.openCapID}_{sample.label}_{sample.mcs}")
-	vis.render_smpl(sample,smplRetargetter,video_dir=video_dir)        
+	# video_dir = os.path.join(RENDER_PATH,f"{sample.openCapID}_{sample.label}_{sample.mcs}")
+	# vis.render_smpl(sample,smplRetargetter,video_dir=video_dir)        
 
 
 	logger.info('Train ended, min_loss = {:.4f}'.format(
@@ -312,14 +312,16 @@ def retarget_sample(sample:OpenCapDataLoader,save_path=None):
 
 # Load file and render skeleton for each video
 def retarget_dataset():
-	save_path = 'SMPL'
+	
 	
 	for subject in os.listdir(DATASET_PATH):
 		for sample_path in os.listdir(os.path.join(DATASET_PATH,subject,'MarkerData')):
-			if sample_path == 'BAP01.trc': continue 	
 			sample_path = os.path.join(DATASET_PATH,subject,'MarkerData',sample_path)
 			sample = OpenCapDataLoader(sample_path)
-			smpl_params = retarget_sample(sample,save_path=save_path)
+
+			if os.path.isfile(os.path.join(SMPL_PATH,sample.name+'.pkl')): continue 
+
+			smpl_params = retarget_sample(sample,save_path=SMPL_PATH)
 
 if __name__ == "__main__": 
 

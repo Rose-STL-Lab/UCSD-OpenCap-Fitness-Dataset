@@ -4,11 +4,14 @@
     },
     "TRAIN": {
         "LEARNING_RATE": 5e-2,
-        "MAX_EPOCH": 1000,
-        "WRITE": 100,
+        "MAX_EPOCH": 200,
+        "WRITE": 20,
         "OPTIMIZE_SCALE":1,
         "OPTIMIZE_SHAPE":1,
-        "OPTIMIZE_OFFSET":1
+        "OPTIMIZE_OFFSET":1,
+        "LAMBDA_DATA_OFFSET":1e-3,
+        "LAMBDA_TRANS":1,
+        "MAX_BETA_UPDATE_DIM":3
     },
     "USE_GPU": 1,
     "DATASET": {
@@ -42,8 +45,20 @@
                 10 
             ],
             [
-                12, 
-                0
+                10,
+                14 
+            ],
+            [
+                10,
+                15 
+            ],
+            [
+                11,
+                17 
+            ],
+            [
+                11,
+                18 
             ],
             [
                 16, 
