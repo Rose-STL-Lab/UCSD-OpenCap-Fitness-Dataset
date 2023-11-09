@@ -1,6 +1,7 @@
 import os
 import sys 
 import logging
+import numpy as np
 from tensorboardX import SummaryWriter
 
 
@@ -19,7 +20,7 @@ RENDER_PATH = os.path.join(HOME_PATH,'rendered_videos')
 
 
 
-# ############################ CONSTANTS #######################################################
+# ############################ DATASET CONSTANTS #######################################################
 # Excercise categories 
 LABELS = ['LSLS', 'CMJ', 'PU', 'SQT', 'RSLS', 'BAPF', 'LLTF', 'LLT', 'RCMJ', 'PUF', 'BAP', 'RLTF', 'RLT', 'LCMJ'] 
 
@@ -31,9 +32,14 @@ JOINT_NAMES = ['Neck', 'RShoulder', 'RElbow', 'RWrist', 'LShoulder', 'LElbow', '
 # JOINT_PARENT_ARRAY[joint] represens the index of the parent of the joint
 JOINT_PARENT_ARRAY = [0, 0, 1, 2, 0, 4, 5, 0, 7, 8, 9, 7, 11, 12, 13, 13, 13, 10, 10, 10]
 
+ROOT_INIT_ROTVEC = np.array([0,np.pi/2,0])
 
+
+############################# Retargetting HYPERPARAMETERS #######################################################
+cuda=True
 
 ############################# LOGGING #######################################################
+DEBUG = True
 class CustomFormatter(logging.Formatter):
 
 	BLACK = '\033[0;30m'
@@ -59,8 +65,8 @@ class CustomFormatter(logging.Formatter):
 	format = "[%(filename)s:%(lineno)d]: %(message)s (%(asctime)s) "
 
 	FORMATS = {
-		logging.DEBUG: BLUE + format + RESET,
-		logging.INFO: YELLOW + format + RESET,
+		logging.DEBUG: YELLOW + format + RESET,
+		logging.INFO: GREY + format + RESET,
 		logging.WARNING: LIGHT_RED + format + RESET,
 		logging.ERROR: RED + format + RESET,
 		logging.CRITICAL: RED + format + RESET
@@ -71,27 +77,24 @@ class CustomFormatter(logging.Formatter):
 		formatter = logging.Formatter(log_fmt)
 		return formatter.format(record)
 
-def get_logger():
+def get_logger(sample_name=None):
 	RENDER_PATH = os.getcwd()
 	logger = logging.getLogger(__name__)
-	logger.setLevel(level=logging.INFO)
+	logger.setLevel(level=logging.DEBUG if DEBUG else logging.INFO)
 
 	handler = logging.FileHandler(os.path.join(RENDER_PATH, "log.txt"))
-	handler.setLevel(logging.INFO)
+	handler.setLevel(level=logging.DEBUG if DEBUG else logging.INFO)
 	formatter = logging.Formatter(
 		'%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 	handler.setFormatter(formatter)
 	logger.addHandler(handler)
 
 	handler = logging.StreamHandler()
-	handler.setLevel(logging.INFO)
+	handler.setLevel(level=logging.DEBUG if DEBUG else logging.INFO)
 	handler.setFormatter(CustomFormatter())
 	logger.addHandler(handler)
 
-	writer = SummaryWriter(os.path.join(RENDER_PATH, 'tb'))
+	writer = SummaryWriter(os.path.join(RENDER_PATH, 'tb'),comment=sample_name)
 
 	return logger, writer
 
-
-############################# Retargetting HYPERPARAMETERS #######################################################
-cuda=True

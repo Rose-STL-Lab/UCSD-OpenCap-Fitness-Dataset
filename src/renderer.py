@@ -5,7 +5,7 @@ import polyscope as ps
 
 from utils import * 
 from dataloader import OpenCapDataLoader
-
+from tqdm import tqdm
 
 class Visualizer: 
 	def __init__(self): 
@@ -71,84 +71,6 @@ class Visualizer:
 
 		print(f"Running Command:",f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse {video_path}")
 
-
-
-	def show(self,sample=None,smplRetargetter=None):
-
-		target = sample.joints_np
-		verts,Jtr,Jtr_offset = smplRetargetter()
-
-		if not hasattr(self,'ps_data'):
-			# Initialize Plot SMPL in polyscope 
-			ps.init()
-			self.ps_data = {}
-			self.ps_data['bbox'] = verts.max(axis=0) - verts.min(axis=0)
-
-			smpl_joints = Jtr
-			smpl_joints_offset = Jtr_offset
-			# smpl_joints = smpl_joints[index['smpl_index'].cpu()]
-			target_joints = target[:,smplRetargetter.index['dataset_index']].cpu().data.numpy()
-			self.ps_data['index_to_show'] = [0, target.shape[0] // 4, target.shape[0] // 2, 3 * target.shape[0] // 4, target.shape[0]-1]
-		
-			smpl_index = list(smplRetargetter.index['smpl_index'].cpu().data.numpy())
-			skeleton_bones = np.array([[x,smpl_index.index(smplRetargetter.index['parent_array'][i])] for x,i in enumerate(smpl_index) if smplRetargetter.index['parent_array'][i] in smpl_index])
-			camera_position = np.array([0,0,20*self.ps_data['bbox'][2]])
-
-			look_at_position = np.array([0,0,0])
-			ps.look_at(camera_position,look_at_position)
-			edges = []
-
-			self.ps_data['skeleton_bones'] = skeleton_bones
-
-			mapping_indices = np.array([[i,i+len(smpl_index)]  for i,x in enumerate(smpl_index)])
-			for i,ind in enumerate(self.ps_data['index_to_show']):
-				self.ps_data[ind] = {}
-				bbox_i = self.ps_data['bbox']*np.array([i-2.5,0,0])
-				self.ps_data[ind]['mesh'] = ps.register_surface_mesh(f"Template:{ind}",verts+bbox_i,smplRetargetter.smpl_layer.smpl_data['f'],transparency=0.5)
-
-				self.ps_data[ind]['target'] = ps.register_point_cloud(f"Target:{ind}",target_joints[ind] + bbox_i,color=np.array([1,0,0]),radius=0.01)
-
-				# self.ps_data[ind]['joints'] = ps.register_point_cloud(f"SMPL-Joints:{ind}",smpl_joints + bbox_i,color=np.array([0,1,0]),radius=0.01)
-				# self.ps_data[ind]['joints-offset'] = ps.register_point_cloud(f"SMPL-Joints:{ind}",smpl_joints_offset + bbox_i,color=np.array([0,1,0]),radius=0.01)
-
-				self.ps_data[ind]['target-skeleton'] = ps.register_curve_network(f"Target Skeleton:{ind}",target_joints[ind] + bbox_i,skeleton_bones,color=np.array([1,0,0]))
-				self.ps_data[ind]['smpl-skeleton'] = ps.register_curve_network(f"SMPL Skeleton:{ind}",smpl_joints[smplRetargetter.index['smpl_index'].cpu()] + bbox_i,skeleton_bones,color=np.array([0,1,0]))
-				self.ps_data[ind]['smpl-offset-skeleton'] = ps.register_curve_network(f"SMPL Skeleton Offset:{ind}",smpl_joints_offset[smplRetargetter.index['smpl_index'].cpu()] + bbox_i,skeleton_bones,color=np.array([1,1,0]))
-
-				self.ps_data[ind]['mapping'] = ps.register_curve_network(f"Mapping:{ind}",np.concatenate([target_joints[ind] + bbox_i,smpl_joints[smplRetargetter.index['smpl_index'].cpu()] + bbox_i],axis=0),mapping_indices,color=np.array([0,0,1]))
-
-			ps.show()
-		else:
-			verts = verts.cpu().data.numpy()
-			
-
-			ps_smpl_index = smplRetargetter.index["smpl_index"].cpu().data.numpy() 
-			ps_dataset_index = smplRetargetter.index["dataset_index"].cpu().data.numpy()
-			# ps_smpl_joints = Jtr[index_to_show][:,smplRetargetter.index["smpl_index"]].cpu().data.numpy()
-
-			ps_smpl_joints = Jtr[:, smplRetargetter.index["smpl_index"]].cpu().data.numpy()
-			ps_smpl_joints_offset = Jtr_offset[:, smplRetargetter.index["smpl_index"]].cpu().data.numpy()
-			# ps_target_joints = target[index_to_show][:,smplRetargetter.index["dataset_index"]].cpu().data.numpy()
-			ps_target_joints = target[:,smplRetargetter.index["dataset_index"]].cpu().data.numpy()
-			for i,ind in enumerate(self.ps_data['index_to_show']):
-				bbox_i = self.ps_data['bbox']*np.array([i-2.5,0,0])
-				# self.ps_data[ind]['mesh'].set_enabled(False)
-				self.ps_data[ind]['mesh'].update_vertex_positions(verts[ind] + bbox_i)
-
-				self.ps_data[ind]['target'].update_point_positions(ps_target_joints[ind] + bbox_i)
-
-				# self.ps_data[ind]['joints'].update_point_positions(ps_smpl_joints[ind] + bbox_i)
-				# self.ps_data[ind]['joints-offset'].update_point_positions(ps_smpl_joints_offset[ind] + bbox_i)
-
-				self.ps_data[ind]['target-skeleton'].update_node_positions(ps_target_joints[ind] + bbox_i)
-				self.ps_data[ind]['smpl-skeleton'].update_node_positions(ps_smpl_joints[ind] + bbox_i)
-				self.ps_data[ind]['smpl-offset-skeleton'].update_node_positions(ps_smpl_joints_offset[ind] + bbox_i)
-
-				self.ps_data[ind]['mapping'].update_node_positions(np.concatenate([ps_target_joints[ind] + bbox_i,ps_smpl_joints_offset[ind] + bbox_i],axis=0))
-
-
-			ps.show()    
-
 	def render_smpl(self,sample,smplRetargetter,video_dir=None):
 
 		target = sample.joints_np
@@ -160,12 +82,18 @@ class Visualizer:
 			ps.init()
 			self.ps_data = {}
 			self.ps_data['bbox'] = verts.max(axis=(0,1)) - verts.min(axis=(0,1))
-			self.ps_data['object_position'] = verts[0].mean(0)
+			self.ps_data['object_position'] = sample.joints_np[0,0]
+
+		# camera_position = np.array([0,0,3*self.ps_data['bbox'][0]])
+		camera_position = np.array([7*self.ps_data['bbox'][0],0.5*self.ps_data['bbox'][1],0]) + self.ps_data['object_position']
+		look_at_position = np.array([0,0,0]) + self.ps_data['object_position']
+		ps.look_at(camera_position,look_at_position)
 
 		Jtr = Jtr.cpu().data.numpy() + np.array([0,0,0])*self.ps_data['bbox']
 
 		verts += np.array([0, 0, 0]) * self.ps_data['bbox']
-		target_joints = target - target[:,7:8,:] + Jtr[:,0:1,:] + np.array([0,0,0])*self.ps_data['bbox']
+		# target_joints = target - target[:,7:8,:] + Jtr[:,0:1,:] + np.array([0,0,0])*self.ps_data['bbox']
+		target_joints = target + np.array([0,0,0])*self.ps_data['bbox']
 
 		Jtr_offset = Jtr_offset[:,smplRetargetter.index['smpl_index']].cpu().data.numpy() + np.array([0.0,0,0])*self.ps_data['bbox']       
 		# Jtr_offset = Jtr_offset.cpu().data.numpy() + np.array([0,0,0])*self.ps_data['bbox']       
@@ -175,25 +103,25 @@ class Visualizer:
 		
 
 		target_bone_array = np.array([[i,p] for i,p in enumerate(smplRetargetter.index['dataset_parent_array'])])
-		ps_target_skeleton = ps.register_curve_network(f"Target Skeleton",target_joints[0],target_bone_array,color=np.array([0,1,0]))
+		ps_target_skeleton = ps.register_curve_network(f"Target Skeleton",target_joints[0],target_bone_array,color=np.array([0,0,1]))
 
 		smpl_bone_array = np.array([[i,p] for i,p in enumerate(smplRetargetter.index['parent_array'])])
 		ps_smpl_skeleton = ps.register_curve_network(f"Smpl Skeleton",Jtr[0],smpl_bone_array,color=np.array([1,0,0]))
 
 		smpl_index = list(smplRetargetter.index['smpl_index'].cpu().data.numpy())    
+
 		offset_skeleton_bones = np.array([[x,smpl_index.index(smplRetargetter.index['parent_array'][i])] for x,i in enumerate(smpl_index) if smplRetargetter.index['parent_array'][i] in smpl_index])
 		ps_offset_skeleton = ps.register_curve_network(f"Offset Skeleton",Jtr_offset[0],offset_skeleton_bones,color=np.array([1,1,0]))
 
 
-		camera_position = np.array([0,0,3*self.ps_data['bbox'][0]])
-		look_at_position = np.array([0,0,0])
-		ps.look_at(camera_position,look_at_position)
+		dataset_index = list(smplRetargetter.index['dataset_index'].cpu().data.numpy())    		
+		joint_mapping = np.concatenate([target_joints[0,dataset_index],Jtr_offset[0]],axis=0)
+		joint_mapping_edges = np.array([(i,joint_mapping.shape[0]//2+i) for i in range(joint_mapping.shape[0]//2)])
+		ps_joint_mapping = ps.register_curve_network(f"Mapping (target- smpl) joints",joint_mapping,joint_mapping_edges,radius=0.001,color=np.array([0,1,0]))
 
 		if video_dir is None:
 			ps.show()
 			return 
-
-		video_dir = os.path.join(video_dir,f"{sample.openCapID}_{sample.label}_{sample.mcs}")
 		os.makedirs(video_dir,exist_ok=True)
 		os.makedirs(os.path.join(video_dir,"images"),exist_ok=True)
 		os.makedirs(os.path.join(video_dir,"video"),exist_ok=True)
@@ -205,14 +133,19 @@ class Visualizer:
 			ps_target_skeleton.update_node_positions(target_joints[i])
 			ps_smpl_skeleton.update_node_positions(Jtr[i])
 			ps_offset_skeleton.update_node_positions(Jtr_offset[i])
+			ps_joint_mapping.update_node_positions(np.concatenate([target_joints[i,dataset_index],Jtr_offset[i]],axis=0))
 
 			image_path = os.path.join(video_dir,"images",f"smpl_{i}.png")
-			print(f"Saving plot to :{image_path}")	
+			# print(f"Saving plot to :{image_path}")	
 			ps.set_screenshot_extension(".png");
 			ps.screenshot(image_path,transparent_bg=False)
-				
+			
+			# if i > 0.6*verts.shape[0]:
+			# if i  % 100 == 99: 
+			# 	ps.show()
+
 		image_path = os.path.join(video_dir,"images",f"smpl_\%d.png")
-		video_path = os.path.join(video_dir,"video",f"smpl.mp4")
+		video_path = os.path.join(video_dir,"video",f"{sample.label}_{sample.mcs}_smpl.mp4")
 		palette_path = os.path.join(video_dir,"video",f"smpl.png")
 		frame_rate = sample.fps
 		os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -vf palettegen {palette_path}")

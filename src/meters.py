@@ -17,7 +17,7 @@ class Meters:
         self.cnt += k
 
     def update_early_stop(self, val):
-        delta = (val - self.min_loss) / self.min_loss
+        delta = (val - self.min_loss) / (self.min_loss+1e-8)
         if float(val) < self.min_loss:
             self.min_loss = float(val)
             self.update_res = True

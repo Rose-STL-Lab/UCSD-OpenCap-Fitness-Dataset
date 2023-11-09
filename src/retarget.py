@@ -30,7 +30,7 @@ torch.backends.cudnn.benchmark = True
 
 
 class SMPLRetarget(nn.Module):
-	def __init__(self,batch_size,device='cpu',max_beta_update_dim=2):
+	def __init__(self,batch_size,device='cpu'):
 		super(SMPLRetarget, self).__init__()
 
 		# Create the SMPL layer
@@ -39,19 +39,22 @@ class SMPLRetarget(nn.Module):
 
 		# Set utils
 		self.batch_size = batch_size
-		self.max_beta_update_dim = max_beta_update_dim
 
 		# Declare/Set/ parameters
 		smpl_params = {}
 		smpl_params["pose_params"] = torch.zeros(batch_size, 72)
+
+		smpl_params["pose_params"][:,:3] = torch.from_numpy(np.tile(ROOT_INIT_ROTVEC[None,:],(batch_size,1))) # ROTATION VECTOR to initialize root joint orientation 
 		smpl_params["pose_params"].requires_grad = True
 
 		smpl_params["trans"] = torch.zeros(batch_size, 3)
 		smpl_params["trans"].requires_grad = True
 
 		smpl_params["shape_params"] = 1*torch.ones(10) if bool(self.cfg.TRAIN.OPTIMIZE_SHAPE) else torch.zeros(10)
+		# smpl_params["shape_params"][0] = 5
+		# smpl_params["shape_params"][1] = 0
 
-		smpl_params["shape_params"][max_beta_update_dim:] = 0
+		smpl_params["shape_params"][self.cfg.TRAIN.MAX_BETA_UPDATE_DIM:] = 0
 		smpl_params["shape_params"].requires_grad = bool(self.cfg.TRAIN.OPTIMIZE_SHAPE)
 
 		smpl_params["scale"] = torch.ones([1])
@@ -87,10 +90,10 @@ class SMPLRetarget(nn.Module):
 
 
 
-		self.optimizer = optim.Adam([{'params': smpl_params["scale"], 'lr': self.cfg.TRAIN.LEARNING_RATE},
-			{'params': smpl_params["shape_params"], 'lr': self.cfg.TRAIN.LEARNING_RATE},
-			{'params': smpl_params["pose_params"], 'lr': self.cfg.TRAIN.LEARNING_RATE},{'params': smpl_params["trans"], 'lr': self.cfg.TRAIN.LEARNING_RATE},
-			{'params': smpl_params["offset"], 'lr': self.cfg.TRAIN.LEARNING_RATE},
+		self.optimizer = optim.Adam([{'params': self.smpl_params["scale"], 'lr': self.cfg.TRAIN.LEARNING_RATE},
+			{'params': self.smpl_params["shape_params"], 'lr': self.cfg.TRAIN.LEARNING_RATE},
+			{'params': self.smpl_params["pose_params"], 'lr': self.cfg.TRAIN.LEARNING_RATE},{'params': self.smpl_params["trans"], 'lr': self.cfg.TRAIN.LEARNING_RATE},
+			{'params': self.smpl_params["offset"], 'lr': self.cfg.TRAIN.LEARNING_RATE},
 			])
 		self.scheduler = optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=0.9)
 
@@ -139,7 +142,7 @@ class SMPLRetarget(nn.Module):
 def retarget_sample(sample:OpenCapDataLoader,save_path=None):
 
 	# Log progress
-	logger, writer = get_logger()
+	logger, writer = get_logger(sample_name=f'{sample.openCapID}_{sample.label}')
 	logger.info(f"Retargetting file:{sample.openCapID}_{sample.label}")
 
 	# Metrics to measure
@@ -161,9 +164,19 @@ def retarget_sample(sample:OpenCapDataLoader,save_path=None):
 
 	smplRetargetter = SMPLRetarget(target.shape[0],device=device).to(device)
 	logger.info(f"OpenCap to SMPL Retargetting details:{smplRetargetter.index}")	
+	logger.info(smplRetargetter.cfg.TRAIN)
+
+	# Intialize trans at root joint location
+	with torch.no_grad():
+		smplRetargetter.smpl_params['trans'][:] = target[:,smplRetargetter.index["dataset_index"][0]]
 
 	# Forward from the SMPL layer
-	verts, Jtr, Jtr_offset = smplRetargetter()
+	# if DEBUG: 
+		# verts, Jtr, Jtr_offset = smplRetargetter()
+	vis.render_smpl(sample,smplRetargetter,video_dir=None)
+
+
+
 	for epoch in tqdm(range(smplRetargetter.cfg.TRAIN.MAX_EPOCH)):
 
 		
@@ -174,21 +187,51 @@ def retarget_sample(sample:OpenCapDataLoader,save_path=None):
 		# print("Per joint loss:",torch.mean(torch.abs(scale*Jtr.index_select(1, index["smpl_index"])-target.index_select(1, index["dataset_index"])),dim=0))
 
 		# verts *= scale
-		
+
+
+		# DATA Loss Terms
 		loss_data = F.smooth_l1_loss(Jtr.index_select(1, smplRetargetter.index["smpl_index"]) ,
 								target.index_select(1, smplRetargetter.index["dataset_index"]))
+
+
 
 		loss_data_offset = F.smooth_l1_loss(Jtr_offset.index_select(1, smplRetargetter.index["smpl_index"]) ,
 								target.index_select(1, smplRetargetter.index["dataset_index"]))
 		
 
+		loss_trans = F.smooth_l1_loss(smplRetargetter.smpl_params['trans'],target[:,smplRetargetter.index["dataset_index"][0],:])
+
+		# Regularizers
 		loss_temporal_smooth_reg = F.smooth_l1_loss(smplRetargetter.smpl_params['pose_params'][1:],smplRetargetter.smpl_params['pose_params'][:-1])
 
 		loss_offset_min = smplRetargetter.smpl_params['offset'].norm()
 
 		loss_beta = smplRetargetter.smpl_params['shape_params'].norm()
 
-		loss = loss_data + loss_data_offset + loss_temporal_smooth_reg + 0.01*loss_offset_min + loss_beta
+
+		# logger.debug(f"LAMBDA OFFSET:{smplRetargetter.cfg.TRAIN.LAMBDA_NORM_OFFSET}")
+		loss = loss_data 
+		loss += loss_data_offset 
+		loss += 1e-8*loss_offset_min  # U
+		loss += loss_temporal_smooth_reg 
+		loss += 0.00001*loss_beta 
+		loss += smplRetargetter.cfg.TRAIN.LAMBDA_TRANS*loss_trans
+
+
+		if epoch % smplRetargetter.cfg.TRAIN.WRITE == 0  or epoch == smplRetargetter.cfg.TRAIN.MAX_EPOCH-1:
+			logger.info("Epoch {}, LR:{:.6f} lossPerBatch={:.6f} Data={:.6f} Offset={:.6f} Trans:{:.6f} Offset Norm={:.6f}  Temporal Reg:{:.6f} Beta Norm:{:.6f}".format(epoch, float(smplRetargetter.scheduler._last_lr[-1]) , float(loss),float(loss_data),float(loss_data_offset),float(loss_trans),float(loss_offset_min),float(loss_temporal_smooth_reg),float(loss_beta)))
+			logger.debug(f"scale:{smplRetargetter.smpl_params['scale']}")
+			logger.debug(f"Beta:{smplRetargetter.smpl_params['shape_params']}")
+			
+			for x,y in zip(["LR", "lossPerBatch", "Data", "Offset", "Trans", "Reg Offset", "Reg Temporal", "Reg BETA Norm"],\
+						[smplRetargetter.scheduler._last_lr[-1] , loss,loss_data,loss_data_offset,loss_trans,loss_offset_min,loss_temporal_smooth_reg,loss_beta]):
+				writer.add_scalar(x, float(y), epoch)
+			
+			# writer.add_scalar('learning_rate', float(smplRetargetter.optimizer.state_dict()['param_groups'][0]['lr']), epoch)
+
+			# vis.render_smpl(sample,smplRetargetter,video_dir=RENDER_PATH)
+
+			smplRetargetter.scheduler.step()
 
 		# criterion = nn.L1Loss(reduction ='none')
 		# weights = torch.ones(Jtr.index_select(1, index["smpl_index"]).shape)
@@ -203,7 +246,8 @@ def retarget_sample(sample:OpenCapDataLoader,save_path=None):
 		loss.backward()
 
 		# Don't update all beta parameters
-		smplRetargetter.smpl_params['shape_params'].grad[smplRetargetter.max_beta_update_dim:] = 0
+		if smplRetargetter.smpl_params['shape_params'].grad is not None:
+			smplRetargetter.smpl_params['shape_params'].grad[smplRetargetter.cfg.TRAIN.MAX_BETA_UPDATE_DIM:] = 0
 		
 		smplRetargetter.optimizer.step()
 
@@ -214,39 +258,53 @@ def retarget_sample(sample:OpenCapDataLoader,save_path=None):
 		#     logger.info("Early stop at epoch {} !".format(epoch))
 		#     break
 
-		if epoch % smplRetargetter.cfg.TRAIN.WRITE == 0 or epoch == smplRetargetter.cfg.TRAIN.MAX_EPOCH-1:
-			# logger.info("Epoch {}, lossPerBatch={:.6f}, scale={:.4f}".format(
-			#         epoch, float(loss),float(scale)))
-			print("Epoch {}, lossPerBatch={:.6f} Data={:.6f} Offset={:.6f} Offset Norm={:.6f}  Temporal Reg:{:.6f} Beta Norm:{:.6f}".format(epoch, float(loss),float(loss_data),float(loss_data_offset),float(loss_offset_min),float(loss_temporal_smooth_reg),float(loss_beta)))
-			# writer.add_scalar('loss', float(loss), epoch)
-			# writer.add_scalar('learning_rate', float(smplRetargetter.optimizer.state_dict()['param_groups'][0]['lr']), epoch)
-			# save_single_pic(res,smpl_layer,epoch,logger,args.dataset_name,target)
 
-			# print(smplRetargetter)
-			# smplRetargetter.show(target,verts,Jtr,Jtr_offset)
-			vis.render_smpl(sample,smplRetargetter,video_dir=None)
 
-			smplRetargetter.scheduler.step()
-			res = smplRetargetter.smpl_params
-			res['joints'] = Jtr
 
 	# smplRetargetter.show(target,verts,Jtr,Jtr_offset)
 
-	print(f'Saving results at:',save_path)
+	logger.info(f'Saving results at:{save_path}')
 	if not os.path.isdir(save_path):
 		os.makedirs(save_path,exist_ok=True)
 
 	if save_path is not None: 
 		save_path = os.path.join(save_path,sample.name+'.pkl')
 		smplRetargetter.save(save_path)	
-	
 
-	# smplRetargetter.render(sample,smplRetargetter,video_dir=RENDER_PATH)        
-	vis.render_smpl(sample,smplRetargetter,video_dir=None)        
+
+	# Plot HIP and angle joints to visualize 
+	for i in range(smplRetargetter.smpl_params['pose_params'].shape[0]):
+		# LHIP 
+		writer.add_scalar(f"LHip-Z", float(smplRetargetter.smpl_params['pose_params'][i,1*3 + 0]),i )
+		writer.add_scalar(f"LHip-Y", float(smplRetargetter.smpl_params['pose_params'][i,1*3 + 1]),i )
+		writer.add_scalar(f"LHip-X", float(smplRetargetter.smpl_params['pose_params'][i,1*3 + 2]),i )
+		# RHIP 
+		writer.add_scalar(f"RHip-Z", float(smplRetargetter.smpl_params['pose_params'][i,2*3 + 0]),i )
+		writer.add_scalar(f"RHip-Y", float(smplRetargetter.smpl_params['pose_params'][i,2*3 + 1]),i )
+		writer.add_scalar(f"RHip-X", float(smplRetargetter.smpl_params['pose_params'][i,2*3 + 2]),i )
+
+		# L-Ankle 
+		writer.add_scalar(f"LAnkle-Z", float(smplRetargetter.smpl_params['pose_params'][i,7*3 + 0]),i )
+		writer.add_scalar(f"LAnkle-Y", float(smplRetargetter.smpl_params['pose_params'][i,7*3 + 1]),i )
+		writer.add_scalar(f"LAnkle-X", float(smplRetargetter.smpl_params['pose_params'][i,7*3 + 2]),i )
+
+		writer.add_scalar(f"RAnkle-Z", float(smplRetargetter.smpl_params['pose_params'][i,8*3 + 0]),i )
+		writer.add_scalar(f"RAnkle-Y", float(smplRetargetter.smpl_params['pose_params'][i,8*3 + 1]),i )
+		writer.add_scalar(f"RAnkle-X", float(smplRetargetter.smpl_params['pose_params'][i,8*3 + 2]),i )
+
+	video_dir = os.path.join(RENDER_PATH,f"{sample.openCapID}_{sample.label}_{sample.mcs}")
+	vis.render_smpl(sample,smplRetargetter,video_dir=video_dir)        
 
 
 	logger.info('Train ended, min_loss = {:.4f}'.format(
 		float(meters.min_loss)))
+
+		
+
+
+
+	writer.flush()
+	writer.close()	
 
 
 	return smplRetargetter.smpl_params
@@ -258,6 +316,7 @@ def retarget_dataset():
 	
 	for subject in os.listdir(DATASET_PATH):
 		for sample_path in os.listdir(os.path.join(DATASET_PATH,subject,'MarkerData')):
+			if sample_path == 'BAP01.trc': continue 	
 			sample_path = os.path.join(DATASET_PATH,subject,'MarkerData',sample_path)
 			sample = OpenCapDataLoader(sample_path)
 			smpl_params = retarget_sample(sample,save_path=save_path)
@@ -269,4 +328,4 @@ if __name__ == "__main__":
 	else:
 		sample_path = sys.argv[1]
 		sample = OpenCapDataLoader(sample_path)
-		smpl_params = retarget_sample(sample)
+		smpl_params = retarget_sample(sample,save_path='SMPL')
