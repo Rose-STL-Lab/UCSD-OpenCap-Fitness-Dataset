@@ -19,6 +19,8 @@ DATASET_PATH = os.path.join(HOME_PATH,'OpenSim') # Path containing all the train
 RENDER_PATH = os.path.join(HOME_PATH,'rendered_videos')
 SMPL_PATH = os.path.join(HOME_PATH,'SMPL')
 
+LOG_PATH = os.path.join(HOME_PATH,'logs')
+
 
 # ############################ DATASET CONSTANTS #######################################################
 # Excercise categories 
@@ -77,12 +79,14 @@ class CustomFormatter(logging.Formatter):
 		formatter = logging.Formatter(log_fmt)
 		return formatter.format(record)
 
-def get_logger(sample_name=None):
-	RENDER_PATH = os.getcwd()
+def get_logger(task_name=None):
+
+	os.makedirs(os.path.join(LOG_PATH, task_name),exists_ok=True)
+
 	logger = logging.getLogger(__name__)
 	logger.setLevel(level=logging.DEBUG if DEBUG else logging.WARNING)
 
-	handler = logging.FileHandler(os.path.join(RENDER_PATH, "log.txt"))
+	handler = logging.FileHandler(os.path.join(LOG_PATH, task_name,"log.txt"))
 	handler.setLevel(level=logging.DEBUG if DEBUG else logging.WARNING)
 	formatter = logging.Formatter(
 		'%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -94,7 +98,7 @@ def get_logger(sample_name=None):
 	handler.setFormatter(CustomFormatter())
 	logger.addHandler(handler)
 
-	writer = SummaryWriter(os.path.join(RENDER_PATH, 'tb'),comment=sample_name)
+	writer = SummaryWriter(os.path.join(LOG_PATH, task_name))
 
 	return logger, writer
 

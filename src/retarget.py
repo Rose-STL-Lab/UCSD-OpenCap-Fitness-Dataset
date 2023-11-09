@@ -142,7 +142,7 @@ class SMPLRetarget(nn.Module):
 def retarget_sample(sample:OpenCapDataLoader,save_path=None):
 
 	# Log progress
-	logger, writer = get_logger(sample_name=f'{sample.openCapID}_{sample.label}')
+	logger, writer = get_logger(task_name='Retarget')
 	logger.info(f"Retargetting file:{sample.openCapID}_{sample.label}")
 
 	# Metrics to measure

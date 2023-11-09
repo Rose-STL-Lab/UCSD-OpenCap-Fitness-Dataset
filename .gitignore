@@ -1,10 +1,10 @@
 # LOG FILES 
-tb
+logs
 log.txt 
 imgui.ini 
 .polyscope.ini
 
-src/tb
+src/logs
 src/log.txt 
 src/imgui.ini 
 src/.polyscope.ini
