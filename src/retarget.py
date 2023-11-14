@@ -14,6 +14,9 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 
+torch.backends.cudnn.enabled = True
+torch.backends.cudnn.benchmark = True
+
 
  
 # Modules
@@ -22,9 +25,6 @@ from dataloader import OpenCapDataLoader # To load TRC file
 from smplpytorch.pytorch.smpl_layer import SMPL_Layer # SMPL Model
 from meters import Meters # Metrics to measure inverse kinematics
 from renderer import Visualizer
-
-torch.backends.cudnn.enabled = True
-torch.backends.cudnn.benchmark = True
 
 
 
@@ -139,7 +139,7 @@ class SMPLRetarget(nn.Module):
 		return f"Scale:{self.smpl_params['scale']} Trans:{self.smpl_params['trans'].mean(dim=0)} Betas:{self.smpl_params['shape_params']} Offset:{self.smpl_params['offset']}"        
 
 
-def retarget_sample(sample:OpenCapDataLoader,save_path=None):
+def retarget_sample(sample:OpenCapDataLoader):
 
 	# Log progress
 	logger, writer = get_logger(task_name='Retarget')
@@ -262,13 +262,12 @@ def retarget_sample(sample:OpenCapDataLoader,save_path=None):
 
 
 	# smplRetargetter.show(target,verts,Jtr,Jtr_offset)
-
-	logger.info(f'Saving results at:{save_path}')
-	if not os.path.isdir(save_path):
-		os.makedirs(save_path,exist_ok=True)
+	if not os.path.isdir(SMPL_PATH):
+		os.makedirs(SMPL_PATH,exist_ok=True)
 
 	if save_path is not None: 
-		save_path = os.path.join(save_path,sample.name+'.pkl')
+		save_path = os.path.join(SMPL_PATH,sample.name+'.pkl')
+		logger.info(f'Saving results at:{save_path}')
 		smplRetargetter.save(save_path)	
 
 
@@ -312,8 +311,6 @@ def retarget_sample(sample:OpenCapDataLoader,save_path=None):
 
 # Load file and render skeleton for each video
 def retarget_dataset():
-	
-	
 	for subject in os.listdir(DATASET_PATH):
 		for sample_path in os.listdir(os.path.join(DATASET_PATH,subject,'MarkerData')):
 			sample_path = os.path.join(DATASET_PATH,subject,'MarkerData',sample_path)
@@ -321,7 +318,7 @@ def retarget_dataset():
 
 			if os.path.isfile(os.path.join(SMPL_PATH,sample.name+'.pkl')): continue 
 
-			smpl_params = retarget_sample(sample,save_path=SMPL_PATH)
+			smpl_params = retarget_sample(sample)
 
 if __name__ == "__main__": 
 
@@ -330,4 +327,4 @@ if __name__ == "__main__":
 	else:
 		sample_path = sys.argv[1]
 		sample = OpenCapDataLoader(sample_path)
-		smpl_params = retarget_sample(sample,save_path='SMPL')
+		smpl_params = retarget_sample(sample)

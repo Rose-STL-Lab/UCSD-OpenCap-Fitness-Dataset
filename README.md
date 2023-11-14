@@ -2,6 +2,8 @@
     - Interpolate between MCS scores 
     - Each activity is divided 5 classes 
 
+# Look into
+Opencap processing: https://github.com/stanfordnmbl/opencap-processing 
 
 ## File Structure
 ```

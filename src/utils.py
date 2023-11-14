@@ -18,7 +18,6 @@ sys.path.append(HOME_PATH)
 DATASET_PATH = os.path.join(HOME_PATH,'OpenSim') # Path containing all the training data (currently using xyz)
 RENDER_PATH = os.path.join(HOME_PATH,'rendered_videos')
 SMPL_PATH = os.path.join(HOME_PATH,'SMPL')
-
 LOG_PATH = os.path.join(HOME_PATH,'logs')
 
 
@@ -37,7 +36,7 @@ JOINT_PARENT_ARRAY = [0, 0, 1, 2, 0, 4, 5, 0, 7, 8, 9, 7, 11, 12, 13, 13, 13, 10
 ROOT_INIT_ROTVEC = np.array([0,np.pi/2,0])
 
 
-############################# Retargetting HYPERPARAMETERS #######################################################
+############################# HYPERPARAMETERS #######################################################
 cuda=True
 
 ############################# LOGGING #######################################################

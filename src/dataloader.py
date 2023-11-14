@@ -4,9 +4,14 @@ import sys
 from tqdm import tqdm
 import numpy as np 
 
+# File loaders
+import pickle 
+
+
+# DL Modules 
 
 # Modules
-from utils import *
+from utils import * # All hyperparameters and paths are defined here
 
 
 # Regex parse filename to get category and mcs score
@@ -70,6 +75,7 @@ class OpenCapDataLoader:
 	@staticmethod
 	def load_trc(sample_path):		
 		# print(f'Loading file:{sample_path}')
+		assert '.trc' == sample_path[:-4], f"Filename:{sample_path} not a OpenSim trc file" 
 		assert "OpenCapData" not in os.path.basename(sample_path), f"Filepath:{os.path.basename(sample_path)} not sample."
 		assert "MarkerData" not in os.path.basename(sample_path), f"Filepath:{os.path.basename(sample_path)} not sample."
 
@@ -144,6 +150,46 @@ class OpenCapDataLoader:
 
 		return frames,joints,joint_np
 
+
+# Converts SMPL parameters to Input representation 
+
+
+class SMPLLoader: 
+	def __init__(self):
+		
+		self.samples = [ self.load_smpl(os.path.join(SMPL_PATH,file)) for file in os.listdir(SMPL_PATH)]
+		self.videos = len(self.samples)
+
+		self.ind = 0
+
+	@staticmethod
+	def load_smpl(sample_path): 
+		assert '.pkl' == sample_path[:-4], f"Filename:{sample_path} not a pickle file" 
+		subjectID,label,mcs = sample_path.split('.')[0].split('_')
+		name = f"{openCapID}_{label}_{mcs}"
+		with open(save_path, 'r') as f:
+			data = pickle.load(f)	
+		return [subjectID, label,mcs,name, SMPLLoader.process_smpl(data)] 
+
+	@staticmethod 
+	def process_smpl(data):
+		# Convert smpl pose params to model input representation
+		for k in data: 
+			print(k,data[k].shape)
+		return data
+
+    def __iter__(self):
+        self.ind = 0
+        return self
+
+    def __next__(self):
+        if self.ind < self.frames:
+        	return self.samples[self.ind]
+        else:
+            raise StopIteration
+
+
+
 # Analyze actions dataset
 def analyze_dataset():
 
@@ -151,6 +197,8 @@ def analyze_dataset():
 
 	for subject in tqdm(os.listdir(DATASET_PATH)):
 		for sample_path in os.listdir(os.path.join(DATASET_PATH,subject,'MarkerData')):
+
+			# TRC File analysis
 			sample_path = os.path.join(DATASET_PATH,subject,'MarkerData',sample_path)
 			sample = OpenCapDataLoader(sample_path)
 			
@@ -161,9 +209,18 @@ def analyze_dataset():
 
 			frames_distribution[sample.label][sample.mcs].append(sample.num_frames)
 
+
+			# SMPL File analysis
+			sample_path = os.path.join(SMPL_PATH,subject,'MarkerData',sample_path)
+			sample = OpenCapDataLoader(sample_path)
+
+
 	classes = list(frames_distribution.keys())
+
 	for c in classes:
 		print(f"Class:{c} Frames_distribution:{[(x,np.mean(frames_distribution[c][x])) for x in frames_distribution[c]]}")
+
+
 
 
 
