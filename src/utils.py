@@ -80,7 +80,7 @@ class CustomFormatter(logging.Formatter):
 
 def get_logger(task_name=None):
 
-	os.makedirs(os.path.join(LOG_PATH, task_name),exists_ok=True)
+	os.makedirs(os.path.join(LOG_PATH, task_name),exist_ok=True)
 
 	logger = logging.getLogger(__name__)
 	logger.setLevel(level=logging.DEBUG if DEBUG else logging.WARNING)

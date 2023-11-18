@@ -173,7 +173,6 @@ def retarget_sample(sample:OpenCapDataLoader):
 	# Forward from the SMPL layer
 	# if DEBUG: 
 		# verts, Jtr, Jtr_offset = smplRetargetter()
-	# vis.render_smpl(sample,smplRetargetter,video_dir=None)
 
 
 
@@ -229,8 +228,6 @@ def retarget_sample(sample:OpenCapDataLoader):
 			
 			# writer.add_scalar('learning_rate', float(smplRetargetter.optimizer.state_dict()['param_groups'][0]['lr']), epoch)
 
-			# vis.render_smpl(sample,smplRetargetter,video_dir=RENDER_PATH)
-
 			smplRetargetter.scheduler.step()
 
 		# criterion = nn.L1Loss(reduction ='none')
@@ -265,10 +262,9 @@ def retarget_sample(sample:OpenCapDataLoader):
 	if not os.path.isdir(SMPL_PATH):
 		os.makedirs(SMPL_PATH,exist_ok=True)
 
-	if save_path is not None: 
-		save_path = os.path.join(SMPL_PATH,sample.name+'.pkl')
-		logger.info(f'Saving results at:{save_path}')
-		smplRetargetter.save(save_path)	
+	save_path = os.path.join(SMPL_PATH,sample.name+'.pkl')
+	logger.info(f'Saving results at:{save_path}')
+	smplRetargetter.save(save_path)	
 
 
 	# Plot HIP and angle joints to visualize 
@@ -291,8 +287,8 @@ def retarget_sample(sample:OpenCapDataLoader):
 		writer.add_scalar(f"RAnkle-Y", float(smplRetargetter.smpl_params['pose_params'][i,8*3 + 1]),i )
 		writer.add_scalar(f"RAnkle-X", float(smplRetargetter.smpl_params['pose_params'][i,8*3 + 2]),i )
 
-	# video_dir = os.path.join(RENDER_PATH,f"{sample.openCapID}_{sample.label}_{sample.mcs}")
-	# vis.render_smpl(sample,smplRetargetter,video_dir=video_dir)        
+	video_dir = os.path.join(RENDER_PATH,f"{sample.openCapID}_{sample.label}_{sample.mcs}")
+	vis.render_smpl(sample,smplRetargetter,video_dir=video_dir)        
 
 
 	logger.info('Train ended, min_loss = {:.4f}'.format(

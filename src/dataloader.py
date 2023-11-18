@@ -70,12 +70,9 @@ class OpenCapDataLoader:
 			raise KeyError(f'{sample_path} does not match regex')
 
 
-
-
 	@staticmethod
 	def load_trc(sample_path):		
-		# print(f'Loading file:{sample_path}')
-		assert '.trc' == sample_path[:-4], f"Filename:{sample_path} not a OpenSim trc file" 
+		assert '.trc' == sample_path[-4:], f"Filename:{sample_path} not a OpenSim trc file" 
 		assert "OpenCapData" not in os.path.basename(sample_path), f"Filepath:{os.path.basename(sample_path)} not sample."
 		assert "MarkerData" not in os.path.basename(sample_path), f"Filepath:{os.path.basename(sample_path)} not sample."
 
@@ -178,15 +175,15 @@ class SMPLLoader:
 			print(k,data[k].shape)
 		return data
 
-    def __iter__(self):
-        self.ind = 0
-        return self
+	def __iter__(self):
+		self.ind = 0
+		return self
 
-    def __next__(self):
-        if self.ind < self.frames:
-        	return self.samples[self.ind]
-        else:
-            raise StopIteration
+	def __next__(self):
+		if self.ind < self.frames:
+			return self.samples[self.ind]
+		else:
+			raise StopIteration
 
 
 
