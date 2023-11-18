@@ -2,10 +2,8 @@
     - Interpolate between MCS scores 
     - Each activity is divided 5 classes 
 
-# Look into
-Opencap processing: https://github.com/stanfordnmbl/opencap-processing 
 
-## File Structure
+## OpenCap File Structure
 ```
 .
 ├── full_data
@@ -27,9 +25,10 @@ Opencap processing: https://github.com/stanfordnmbl/opencap-processing
 │ │     │ └── cameraIntrinsicsExtrinsics.pickle
 │ │     └── mappingCamDevice.pickle
 ```
+**Opencap processing**:  [Library to process files](https://github.com/stanfordnmbl/opencap-processing )
 
 
-## Visualization 
+## 1. Visualization 
 
 ### Installation
 ```
@@ -56,28 +55,51 @@ pip install polyscope opensim ffmpeg
 
 
 
-### Rendering 
+###  Rendering 
 Renders a video of the skeleton video using polyscope 
 ```
-python3 render_skeleton.py <sample-filepath>
+python3 renderer.py # For complete dataset
 ```
 Or 
 ```
-python3 render_skeleton.py <sample-filepath> <video-dir>
+python3 renderer.py <sample-filepath> # Specific trc file
 ```
 
 `<sample-filepath>` is the path to the trc file containing the xyz co-ordinates of each joint to plot
 
-`video-dir` is the path the to directory where videos need to be saved
+
+## 2. Retargetting  
+To retarget .trc file to SMPL format  
+```
+python3 retarget.py # For complete dataset
+```
+Or 
+```
+python3 renderer.py <sample-filepath> # Specific trc file
+```
+
+`<sample-filepath>` is the path to the trc file containing the xyz co-ordinates of each joint to plot
 
 
-## Mocap Capture Data analysis
 
-### Model 
+### 3. Data engineering 
+- Input representation 
+
+
+## Data analysis
+- Mocap Capture 
+### TODO: Per sample pose reconstruction using PCA 
+
+### TODO: Per sample per joint fourier analysis 
+
+
+### Muscle forces reaction data analysis
+We are using the following model to evaluate our generartion: 
 ```
     Rajagopal, A., Dembia, C.L., DeMers, M.S., Delp, D.D., Hicks, J.L., Delp, S.L. (2016) Full-body musculoskeletal model for muscle-driven simulation of human gait. IEEE Transactions on Biomedical Engineering
 ```
 
+Additional information about the model can be found on the links below: 
 ### Muscular-Skeleton Model information: 
 - https://simtk-confluence.stanford.edu:8443/display/OpenSim/OpenSim+Models
 - https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5989715/
