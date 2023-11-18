@@ -75,7 +75,7 @@ python3 retarget.py # For complete dataset
 ```
 Or 
 ```
-python3 renderer.py <sample-filepath> # Specific trc file
+python3 retarget.py <sample-filepath> # Specific trc file
 ```
 
 `<sample-filepath>` is the path to the trc file containing the xyz co-ordinates of each joint to plot
