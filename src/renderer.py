@@ -1,11 +1,12 @@
 import os 
 import sys
 import numpy as np 
+from tqdm import tqdm
 import polyscope as ps 
+import trimesh 
 
 from utils import * 
 from dataloader import OpenCapDataLoader
-from tqdm import tqdm
 
 class Visualizer: 
 	def __init__(self): 
@@ -154,6 +155,69 @@ class Visualizer:
 
 		print(f"Running Command:",f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse {video_path}")
 
+
+	def render_rabit(self,sample): 
+
+		T = sample.num_frames
+
+		# Get bounding box and object position 
+		source = sample.smpl.get_verts(0)
+		taret = sample.smpl.get_verts(0)
+
+		for i in range(T): 
+			if i == 0 : 
+
+			else: 
+
+
+
+
+class VisualizerTrimesh: 
+	def __init__(self): 
+		
+		self.scene = trimesh.Scene()
+
+	def render_with_texture(pose_data):
+		# Load Random RaBit Model and render 
+		window_conf = gl.Config(double_buffer=True, depth_size=6)
+			
+
+		rabit = RaBitModel()
+		texture_util.generate_texture("output/m_t.png") # Create a random texture
+
+		beta = np.random.rand(*(500,)) * 10 - 5
+		# beta[10:] = smpl.smpl_params['shape']
+		# beta[10:] = 0
+		
+		trans = np.zeros(rabit.trans_shape)
+
+
+		vis.render_with_texture() # Only possible using trimesh for now 
+
+		os.makedirs("output/renderings", exist_ok=True)
+		for i,theta in enumerate(pose_data): 
+			if i % 50 == 0: 
+				print(f"Rendering:{i} frame")
+			rabit.set_params(beta=beta, pose=theta, trans=trans)
+			rabit.save_to_obj_with_texture(save_path)
+			
+			tmesh = trimesh.load(save_path)
+
+			scene.add_geometry(tmesh,"RaBit") 
+
+
+			# increment the file name
+			file_name = "output/renderings/render_" + str(i) + ".png"
+			# save a render of the object as a png
+			png = scene.save_image(resolution=[1920, 1080], visible=True)
+			with open(file_name, "wb") as f:
+				f.write(png)
+				f.close()
+
+			scene.delete_geometry(['m_t.obj'])
+
+
+		os.system(f"ffmpeg -y -framerate 60 -i output/renderings/render_\%d.png output/video.mp4")
 
 
 # Load file and render skeleton for each video

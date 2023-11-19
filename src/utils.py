@@ -4,20 +4,24 @@ import logging
 import numpy as np
 from tensorboardX import SummaryWriter
 
+########################## SET RANDOM SEEDS #################################
+np.random.seed(2)
 
 ############################# LIBRARY IMPORTS ####################################################
 assert __file__[-1] != '/' , f'File:{__init__}, cannot be parsed' 
 SRC_PATH,_ = os.path.split(os.path.abspath(__file__))
 HOME_PATH,_ = os.path.split(SRC_PATH)
+RABIT_PATH  = os.path.join(HOME_PATH,'RaBit')
+STYLEGAN_PATH = os.path.join(RABIT_PATH,'stylegan3')
 
-sys.path.append(HOME_PATH)
+sys.path.extend([HOME_PATH,RABIT_PATH,STYLEGAN_PATH])
 
 
 # ############################ FOLDER PATHS #######################################################
 # Files
 DATASET_PATH = os.path.join(HOME_PATH,'OpenSim') # Path containing all the training data (currently using xyz)
-RENDER_PATH = os.path.join(HOME_PATH,'rendered_videos')
 SMPL_PATH = os.path.join(HOME_PATH,'SMPL')
+RENDER_PATH = os.path.join(HOME_PATH,'rendered_videos')
 LOG_PATH = os.path.join(HOME_PATH,'logs')
 
 
@@ -35,12 +39,40 @@ JOINT_PARENT_ARRAY = [0, 0, 1, 2, 0, 4, 5, 0, 7, 8, 9, 7, 11, 12, 13, 13, 13, 10
 
 ROOT_INIT_ROTVEC = np.array([0,np.pi/2,0])
 
+##################################### RABIT Parameters #######################################
+smpl2rabit_mapping = [ 0, # Center hip 
+                       3, # spine0
+                       6, # spine1
+                       9, # spine3 
+                       14,# right chest 
+                       17,# right shoulder 
+                       19,# right elblow 
+                       21,# right ability ? 
+                       23,# right hand 
+                       12,# neck1
+                       15,# neck2
+                       2, # r hip 
+                       5, # r knee
+                       1, # l hip 
+                       4, # l knee
+                       8, # r ankle 
+                       11,# r foot 
+                       13,# l chest 
+                       16,# lshoudler
+                       18,# elbow
+                       20,# lability 
+                       22,# lhand
+                       7, # lankle
+                       10,# lfoor
+                     ]
 
-############################# HYPERPARAMETERS #######################################################
+
+############################# RETARGETTING HYPERPARAMETERS #######################################################
 cuda=True
+RENDER=True
 
 ############################# LOGGING #######################################################
-DEBUG = False
+DEBUG = True
 class CustomFormatter(logging.Formatter):
 
 	BLACK = '\033[0;30m'

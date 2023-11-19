@@ -21,13 +21,10 @@ torch.backends.cudnn.benchmark = True
  
 # Modules
 from utils import * # Config details 
-from dataloader import OpenCapDataLoader # To load TRC file
+from dataloader import OpenCapDataLoader,SMPLLoader # To load TRC file
 from smplpytorch.pytorch.smpl_layer import SMPL_Layer # SMPL Model
 from meters import Meters # Metrics to measure inverse kinematics
 from renderer import Visualizer
-
-
-
 
 class SMPLRetarget(nn.Module):
 	def __init__(self,batch_size,device='cpu'):
@@ -135,11 +132,14 @@ class SMPLRetarget(nn.Module):
 		with open(save_path, 'wb') as f:
 			pickle.dump(res, f)	
 
+	def load(self,save_path):
+			
+
 	def __repr__(self):
 		return f"Scale:{self.smpl_params['scale']} Trans:{self.smpl_params['trans'].mean(dim=0)} Betas:{self.smpl_params['shape_params']} Offset:{self.smpl_params['offset']}"        
 
 
-def retarget_sample(sample:OpenCapDataLoader):
+def retarget_opencap2smpl(sample:OpenCapDataLoader):
 
 	# Log progress
 	logger, writer = get_logger(task_name='Retarget')
@@ -162,7 +162,7 @@ def retarget_sample(sample:OpenCapDataLoader):
 	target = torch.from_numpy(sample.joints_np).float()
 	target = target.to(device)
 
-	smplRetargetter = SMPLRetarget(target.shape[0],device=device).to(device)
+	smplRetargetter = SMPLRetarget(sample.joints_np.shape[0],device=device).to(device)
 	logger.info(f"OpenCap to SMPL Retargetting details:{smplRetargetter.index}")	
 	logger.info(smplRetargetter.cfg.TRAIN)
 
@@ -288,15 +288,13 @@ def retarget_sample(sample:OpenCapDataLoader):
 		writer.add_scalar(f"RAnkle-X", float(smplRetargetter.smpl_params['pose_params'][i,8*3 + 2]),i )
 
 	video_dir = os.path.join(RENDER_PATH,f"{sample.openCapID}_{sample.label}_{sample.mcs}")
-	vis.render_smpl(sample,smplRetargetter,video_dir=video_dir)        
+
+	if RENDER:
+		vis.render_smpl(sample,smplRetargetter,video_dir=video_dir)        
 
 
 	logger.info('Train ended, min_loss = {:.4f}'.format(
 		float(meters.min_loss)))
-
-		
-
-
 
 	writer.flush()
 	writer.close()	
@@ -312,9 +310,11 @@ def retarget_dataset():
 			sample_path = os.path.join(DATASET_PATH,subject,'MarkerData',sample_path)
 			sample = OpenCapDataLoader(sample_path)
 
-			if os.path.isfile(os.path.join(SMPL_PATH,sample.name+'.pkl')): continue 
+			if not os.path.isfile(os.path.join(SMPL_PATH,sample.name+'.pkl')): 
+				smpl_params = retarget_opencap2smpl(sample)
+				sample.smpl = smpl_params
 
-			smpl_params = retarget_sample(sample)
+			sample.smpl = SMPLLoader(os.path.join(SMPL_PATH,sample.name+'.pkl'))
 
 if __name__ == "__main__": 
 
@@ -323,4 +323,10 @@ if __name__ == "__main__":
 	else:
 		sample_path = sys.argv[1]
 		sample = OpenCapDataLoader(sample_path)
-		smpl_params = retarget_sample(sample)
+
+		if not os.path.isfile(os.path.join(SMPL_PATH,sample.name+'.pkl')): 
+			smpl_params = retarget_opencap2smpl(sample)
+			sample.smpl = smpl_params
+	
+		sample.smpl = SMPLLoader(os.path.join(SMPL_PATH,sample.name+'.pkl'))	
+

@@ -88,19 +88,18 @@ python3 retarget.py <sample-filepath> # Specific trc file
 
 ## Data analysis
 - Mocap Capture 
-### TODO: Per sample pose reconstruction using PCA 
+#### TODO: Per sample pose reconstruction using PCA 
 
-### TODO: Per sample per joint fourier analysis 
+#### TODO: Per sample per joint fourier analysis 
 
 
-### Muscle forces reaction data analysis
-We are using the following model to evaluate our generartion: 
+#### Muscle forces reaction data analysis
 ```
     Rajagopal, A., Dembia, C.L., DeMers, M.S., Delp, D.D., Hicks, J.L., Delp, S.L. (2016) Full-body musculoskeletal model for muscle-driven simulation of human gait. IEEE Transactions on Biomedical Engineering
 ```
 
 Additional information about the model can be found on the links below: 
-### Muscular-Skeleton Model information: 
+#### Muscular-Skeleton Model information: 
 - https://simtk-confluence.stanford.edu:8443/display/OpenSim/OpenSim+Models
 - https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5989715/
 - https://github.com/opensim-org/opensim-models
@@ -108,4 +107,22 @@ Additional information about the model can be found on the links below:
 
 
 
+
+## 4. Retargetting to RaBit
+
+<details>
+<summary>Rabit installation details </summary>
+1. Clone RaBit Library
+
+```
+    git clone https://github.com/zhongjinluo/RaBit.git
+    cd RaBit 
+```
+2. Download model data from [link](https://drive.google.com/file/d/1yvweTYPKtmuMt5Eu7CHZ4-Do4CRYLFtp/view?usp=sharing) to `<HOME_PATH>/RaBit`
+
+3. Unzip 
+```
+unzip rabit_data.zip
+```
+</details>
 
