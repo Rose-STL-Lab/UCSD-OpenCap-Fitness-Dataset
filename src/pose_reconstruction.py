@@ -35,7 +35,7 @@ def pca_pose_reconstruction():
 
 	poseReconstructer = PoseReconstructer()
 	vis = Visualizer()
-	dataloader = SMPLLoader(SMPL_PATH)
+	dataloader = SMPLLoader(SMPL_DIR)
 	poses = [sample.inp for sample in dataloader.get_in ]
 	for sample in : 
 		rec = reconstruct(sample.inp)

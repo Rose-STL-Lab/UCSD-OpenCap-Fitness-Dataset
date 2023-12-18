@@ -22,6 +22,7 @@ from utils import * # Config details
 from dataloader import OpenCapDataLoader,SMPLLoader # To load TRC file
 from meters import Meters # Metrics to measure inverse kinematics
 from renderer import Visualizer
+from retarget2smpl import SMPLRetarget
 
 
 import numpy as np
@@ -40,7 +41,7 @@ class RaBitModel():
 	"""
 	def __init__(self):
 
-		dataroot = os.path.join(RABIT_PATH,"rabit_data/")
+		dataroot = os.path.join(RABIT_DIR,"rabit_data/")
 		self.mean_file = [dataroot + "shape/mean.obj"]
 		self.pca_weight = np.load(dataroot + "shape/pcamat.npy", allow_pickle=True)
 		self.clusterdic = np.load(dataroot + "shape/clusterdic.npy", allow_pickle=True).item()
@@ -143,7 +144,7 @@ class RaBitModel():
 
 		"""
 		if pose is not None:
-			pose = pose[self.reorder_index, :]
+			self.global_pose = self.pose[]
 			self.pose = pose[1:,:]
 		if beta is not None:
 			self.beta = beta
@@ -170,6 +171,7 @@ class RaBitModel():
 		# rotation matrix for each joint
 		# compared to smpl model, rabit needn't simulate the deform of muscle
 		pose_cube = np.zeros((24, 1, 3))
+
 		pose_cube[1:, :, :] += self.pose.reshape((-1, 1, 3))
 		self.R = self.rodrigues(pose_cube)
 		self.v_posed = v_shaped.reshape(-1, 3)
@@ -299,13 +301,13 @@ class RaBitModel():
 		path: Path to save.
 
 		"""
-		shutil.copyfile("rabit_data/UV/m_t.mtl", path.replace(".obj", ".mtl"))
+
 		vertex_texture_lines = []
 		face_lines = []
 		template_vertex_count = 0
 		usemtl = ""
 		mtllib = ""
-		with open("./rabit_data/UV/tri.obj") as file_in_template:
+		with open(os.path.join(RABIT_DIR,"./rabit_data/UV/tri.obj")) as file_in_template:
 			for line in file_in_template.readlines():
 				line = line.replace('\n', '')
 				if line.startswith('#'):
@@ -357,28 +359,20 @@ class RaBitModel():
 				new_line += "\n"
 				file_out.write(new_line)
 
-	def load_smpl_params(self,smpl_params): 
-
-		theta = smpl_params["pose_params"].transpose((1,0,2))
+	def load_smpl_params(self,smpl_params,frame=0): 
+		
+		theta = smpl_params["pose_params"].reshape((-1,24,3))
 		beta = np.random.rand(*(500,)) * 10 - 5
-		# beta[10:] = 0
-		beta[10:] = smpl_params["shape_params"]
+		beta[10:] = 0
+		# beta[10:] = smpl_params["shape_params"]
 		# trans = np.zeros(self.trans_shape)
 		trans = smpl_params["trans"]
 
-		self.update()
-
-		# rabit.set_params(beta=beta, pose=theta, trans=trans)
-		# rabit.save_to_obj_with_texture(save_path)
+		self.set_params(beta=beta, pose=theta[frame].cpu().data.numpy(), trans=trans[frame].cpu().data.numpy())
 
 
 
 def retarget_smpl2rabit(sample:OpenCapDataLoader):
-
-	if not os.path.isfile(os.path.join(SMPL_PATH,sample.name+'.pkl')): 
-		from retarget2smpl import retarget_opencap2smpl
-		smpl_params = retarget_opencap2smpl(sample)
-		sample.smpl = smpl_params
 
 	# Log progress
 	logger, writer = get_logger(task_name='Retarget2Rabit')
@@ -395,85 +389,52 @@ def retarget_smpl2rabit(sample:OpenCapDataLoader):
 		device = torch.device('cuda')
 	else:
 		device = torch.device('cpu')
-
-	# Load SMPL data 
-	sample.smpl = smplRetargetter
 		
 	# Define Rabit Module
 	rabit = RaBitModel()	
-	rabit.load_smpl_params(sample.smpl)
+
 
 	# Create random texture and save
-	if os.path.isfile(os.path.join(RENDER_PATH,"RaBit",f"{sample.name}.png")):
-		os.makedirs(os.path.join(RENDER_PATH,"RaBit"),exist_ok=True)
-		texture_util.generate_texture(os.path.join(RENDER_PATH,"RaBit",f"{sample.name}.png"))
+	if not os.path.isfile(os.path.join(RENDER_DIR,sample.name,"RaBit",f"m_t.png")):
+		os.makedirs(os.path.join(RENDER_DIR,sample.name,"RaBit"),exist_ok=True)
+		texture_util.generate_texture(os.path.join(RENDER_DIR,sample.name,"RaBit",f"m_t.png"),network_pkl=os.path.join(RABIT_DIR,'rabit_data/texture/texture.pkl'))
+	shutil.copyfile(os.path.join(RABIT_DIR,"rabit_data/UV/m_t.mtl"), os.path.join(RENDER_DIR,sample.name,"RaBit",f"m_t.mtl"))
 
-	# rabit.save_to_obj_with_texture(save_path)
+
+	# Run TODO inverse kinematic and other optimizations to affect pose to match contacts of the scene  
+
+	for frame in range(sample.num_frames):
+		if not os.path.isfile(os.path.join(RENDER_DIR,sample.name,"RaBit", f"{frame}.obj")):
+			rabit.load_smpl_params(sample.smpl.smpl_params,frame)
+			rabit.save_to_obj_with_texture(os.path.join(RENDER_DIR,sample.name,"RaBit", f"{frame}.obj"))
 
 	sample.rabit = rabit
 
 	vis.render_rabit(sample)
 
-
-
 	# smplRetargetter = SMPLRetarget(sample.joints_np.shape[0],device=device).to(device)
-	logger.info(f"SMPL to RaBit Retargetting details:{smplRetargetter.index}")	
+	logger.info(f"SMPL to RaBit Retargetting Done")	
 	logger.info(smplRetargetter.cfg.TRAIN)
 
-	# smplRetargetter.show(target,verts,Jtr,Jtr_offset)
-	if not os.path.isdir(SMPL_PATH):
-		os.makedirs(SMPL_PATH,exist_ok=True)
-
-	save_path = os.path.join(SMPL_PATH,sample.name+'.pkl')
-	logger.info(f'Saving results at:{save_path}')
-	smplRetargetter.save(save_path)	
-
-
-	# Plot HIP and angle joints to visualize 
-	for i in range(smplRetargetter.smpl_params['pose_params'].shape[0]):
-		# LHIP 
-		writer.add_scalar(f"LHip-Z", float(smplRetargetter.smpl_params['pose_params'][i,1*3 + 0]),i )
-		writer.add_scalar(f"LHip-Y", float(smplRetargetter.smpl_params['pose_params'][i,1*3 + 1]),i )
-		writer.add_scalar(f"LHip-X", float(smplRetargetter.smpl_params['pose_params'][i,1*3 + 2]),i )
-		# RHIP 
-		writer.add_scalar(f"RHip-Z", float(smplRetargetter.smpl_params['pose_params'][i,2*3 + 0]),i )
-		writer.add_scalar(f"RHip-Y", float(smplRetargetter.smpl_params['pose_params'][i,2*3 + 1]),i )
-		writer.add_scalar(f"RHip-X", float(smplRetargetter.smpl_params['pose_params'][i,2*3 + 2]),i )
-
-		# L-Ankle 
-		writer.add_scalar(f"LAnkle-Z", float(smplRetargetter.smpl_params['pose_params'][i,7*3 + 0]),i )
-		writer.add_scalar(f"LAnkle-Y", float(smplRetargetter.smpl_params['pose_params'][i,7*3 + 1]),i )
-		writer.add_scalar(f"LAnkle-X", float(smplRetargetter.smpl_params['pose_params'][i,7*3 + 2]),i )
-
-		writer.add_scalar(f"RAnkle-Z", float(smplRetargetter.smpl_params['pose_params'][i,8*3 + 0]),i )
-		writer.add_scalar(f"RAnkle-Y", float(smplRetargetter.smpl_params['pose_params'][i,8*3 + 1]),i )
-		writer.add_scalar(f"RAnkle-X", float(smplRetargetter.smpl_params['pose_params'][i,8*3 + 2]),i )
-
-	video_dir = os.path.join(RENDER_PATH,f"{sample.openCapID}_{sample.label}_{sample.mcs}")
-
-	if RENDER:
-		vis.render_smpl(sample,smplRetargetter,video_dir=video_dir)        
-
-
-	logger.info('Train ended, min_loss = {:.4f}'.format(
-		float(meters.min_loss)))
-
-	writer.flush()
-	writer.close()	
-
-
-	return smplRetargetter.smpl_params
+	return sample.rabit
 
 
 
 # Load file and render skeleton for each video
 def retarget_dataset():
-	for subject in os.listdir(DATASET_PATH):
-		for sample_path in os.listdir(os.path.join(DATASET_PATH,subject,'MarkerData')):
-			sample_path = os.path.join(DATASET_PATH,subject,'MarkerData',sample_path)
+	for subject in os.listdir(DATASET_DIR):
+		for sample_path in os.listdir(os.path.join(DATASET_DIR,subject,'MarkerData')):
+			sample_path = os.path.join(DATASET_DIR,subject,'MarkerData',sample_path)
 			sample = OpenCapDataLoader(sample_path)
+			
+			if not os.path.isfile(os.path.join(SMPL_DIR,sample.name+'.pkl')): 
+				sample.smpl = retarget_opencap2smpl(sample)
+			else:	
+				torch_device = torch.device('cuda' if cuda else 'cpu')	
+				sample.smpl = SMPLRetarget(sample.joints_np.shape[0],device=torch_device).to(torch_device)	
+				sample.smpl.load(os.path.join(SMPL_DIR,sample.name+'.pkl'))
 
-			raBit_params = retarget_smpl2rabit(sample)
+			sample.rabit = retarget_smpl2rabit(sample)
 
 
 
@@ -484,4 +445,12 @@ if __name__ == "__main__":
 	else:
 		sample_path = sys.argv[1]
 		sample = OpenCapDataLoader(sample_path)
-		raBit_params = retarget_smpl2rabit(sample)		
+
+		if not os.path.isfile(os.path.join(SMPL_DIR,sample.name+'.pkl')): 
+			sample.smpl = retarget_opencap2smpl(sample)
+		else:	
+			torch_device = torch.device('cuda' if cuda else 'cpu')	
+			sample.smpl = SMPLRetarget(sample.joints_np.shape[0],device=torch_device).to(torch_device)	
+			sample.smpl.load(os.path.join(SMPL_DIR,sample.name+'.pkl'))
+		sample.rabit = retarget_smpl2rabit(sample)
+	

@@ -156,18 +156,93 @@ class Visualizer:
 		print(f"Running Command:",f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse {video_path}")
 
 
-	def render_rabit(self,sample): 
+	def render_rabit(self,sample,video_dir=None): 
 
 		T = sample.num_frames
 
 		# Get bounding box and object position 
-		source = sample.smpl.get_verts(0)
-		taret = sample.smpl.get_verts(0)
+		smpl_verts,smpl_joints,_ = sample.smpl()
+		smpl_verts = smpl_verts.cpu().data.numpy()
+		smpl_joints = smpl_joints.cpu().data.numpy()
 
-		for i in range(T): 
-			if i == 0 : 
+		# Load 0th frame and get params
+		sample.rabit.load_smpl_params(sample.smpl.smpl_params,0)
+		rabit_verts = sample.rabit.verts
+		rabit_joints = sample.rabit.J
 
-			else: 
+
+		bbox_smpl = smpl_verts.max(axis=(0,1))  - smpl_verts.min(axis=(0,1))
+		bbox_target = rabit_verts.max(axis=0)  - rabit_verts.min(axis=0)
+
+		bbox = bbox_smpl if np.linalg.norm(bbox_smpl) > np.linalg.norm(bbox_target) else bbox_target
+
+		object_position = sample.joints_np[0,0]
+
+		# camera_position = np.array([0,0,3*self.ps_data['bbox'][0]])
+		camera_position = np.array([7*bbox[0],0,0]) + object_position
+		look_at_position = np.array([0,0,0]) + object_position
+		ps.look_at(camera_position,look_at_position)
+
+		# Translate objects to visualize 
+		smpl_joints += (np.array([0,0,+0.5])*bbox).reshape((1,-1,3))  
+		smpl_verts += (np.array([0, 0, +0.5]) * bbox).reshape((1,-1,3))
+
+		rabit_joints += (np.array([0,0,-0.5])*bbox).reshape((1,3))  
+		rabit_verts += (np.array([0, 0, -0.5]) * bbox).reshape((1,3))
+
+
+		# Initial plot
+		ps.remove_all_structures()
+		ps_smpl_mesh = ps.register_surface_mesh('SMPL Mesh',smpl_verts[0],sample.smpl.smpl_layer.smpl_data['f'],transparency=0.5)
+		
+		smpl_bone_array = np.array([[i,p] for i,p in enumerate(sample.smpl.index['parent_array'])])
+		ps_smpl_skeleton = ps.register_curve_network(f"SMPL Skeleton",smpl_joints[0],smpl_bone_array,color=np.array([1,0,0]))
+
+
+		ps_rabit_mesh = ps.register_surface_mesh('RaBit Mesh',rabit_verts,sample.rabit._faces,transparency=0.5)
+		
+		rabit_bone_array = np.array([[i,p] for i,p in enumerate(sample.smpl.index['parent_array'])])
+		ps_rabit_skeleton = ps.register_curve_network(f"RaBit Skeleton",rabit_joints,rabit_bone_array,color=np.array([1,0,0]))
+
+
+		if video_dir is None:
+			ps.show()
+			return 
+		os.makedirs(video_dir,exist_ok=True)
+		os.makedirs(os.path.join(video_dir,"images"),exist_ok=True)
+		os.makedirs(os.path.join(video_dir,"video"),exist_ok=True)
+
+		# ps.show()
+		print(f'Rendering images:')
+		for i in tqdm(range(verts.shape[0])):
+			ps_mesh.update_vertex_positions(verts[i])
+			ps_target_skeleton.update_node_positions(target_joints[i])
+			ps_smpl_skeleton.update_node_positions(Jtr[i])
+			ps_offset_skeleton.update_node_positions(Jtr_offset[i])
+			ps_joint_mapping.update_node_positions(np.concatenate([target_joints[i,dataset_index],Jtr_offset[i]],axis=0))
+
+			image_path = os.path.join(video_dir,"images",f"smpl_{i}.png")
+			# print(f"Saving plot to :{image_path}")	
+			ps.set_screenshot_extension(".png");
+			ps.screenshot(image_path,transparent_bg=False)
+			
+			# if i > 0.6*verts.shape[0]:
+			# if i  % 100 == 99: 
+			# 	ps.show()
+
+		image_path = os.path.join(video_dir,"images",f"smpl_\%d.png")
+		video_path = os.path.join(video_dir,"video",f"{sample.label}_{sample.mcs}_smpl.mp4")
+		palette_path = os.path.join(video_dir,"video",f"smpl.png")
+		frame_rate = sample.fps
+		os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -vf palettegen {palette_path}")
+		os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse 	 {video_path}")	
+		# os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse {video_path.replace('mp4','gif')}")	
+
+		print(f"Running Command:",f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse {video_path}")
+
+
+
+
 
 
 
@@ -226,9 +301,9 @@ def render_dataset():
 	
 	vis = Visualizer()
 	
-	for subject in os.listdir(DATASET_PATH):
-		for sample_path in os.listdir(os.path.join(DATASET_PATH,subject,'MarkerData')):
-			sample_path = os.path.join(DATASET_PATH,subject,'MarkerData',sample_path)
+	for subject in os.listdir(DATASET_DIR):
+		for sample_path in os.listdir(os.path.join(DATASET_DIR,subject,'MarkerData')):
+			sample_path = os.path.join(DATASET_DIR,subject,'MarkerData',sample_path)
 			sample = OpenCapDataLoader(sample_path)
 			vis.render_skeleton(sample,video_dir=video_dir)
 		

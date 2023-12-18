@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="description"
+        content="Style-based controllable motion generation">
+  <meta name="keywords" content="Generative AI, Stable diffusio, Animation">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Permissions-Policy" content="interest-cohort=()">
+
+  <title>Style-based controllable motion generation</title>
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<!--   <script async src="https://www.googletagmanager.com/gtag/js?id=G-PYVRSFMDRL"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+
+    function gtag() {
+      dataLayer.push(arguments);
+    }
+
+    gtag('js', new Date());
+
+    gtag('config', 'G-PYVRSFMDRL');
+  </script> -->
+
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
+        rel="stylesheet">
+
+  <link rel="stylesheet" href="./static/css/bulma.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-slider.min.css">
+  <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="./static/css/index.css">
+  <link rel="icon" href="./static/images/favicon.ico">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="./static/js/fontawesome.all.min.js"></script>
+  <script src="./static/js/bulma-carousel.min.js"></script>
+  <script src="./static/js/bulma-slider.min.js"></script>
+  <script src="./static/js/index.js"></script>
+</head>
+<body>
+
+<section class="hero">
+  <div class="hero-body">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered">
+        <div class="column has-text-centered">
+          <h1 class="title is-1 publication-title">Style-based controllable motion generation</h1>
+          <div class="is-size-5 publication-authors">
+            <span class="author-block">
+              <a href="https://www.linkedin.com/in/paninib">Panini Bhamidipati</a>,</span>
+            <span class="author-block">
+              <a href="https://roseyu.com/">Rose Yu</a>,
+            </span>
+          </div>
+
+          <div class="is-size-5 publication-authors">
+            <span class="author-block">Department of Computer Science</span><br>
+            <span class="author-block">UC San Diego</span>
+          </div>
+
+          <div class="column has-text-centered">
+            <div class="publication-links">
+              <!-- PDF Link. -->
+              <span class="link-block">
+                <a href="" 
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fas fa-file-pdf"></i>
+                  </span>
+                  <span>Paper</span>
+                </a>
+              </span>
+              <span class="link-block">
+                <a href="" 
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fas fa-file-pdf"></i>
+                  </span>
+                  <span>Supplementary</span>
+                </a>
+              </span>
+              <!-- Video Link. -->
+              <span class="link-block">
+                <a href="" 
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fa fa-solid fa-image"></i>
+                  </span>
+                  <span>Poster</span>
+                </a>
+              </span>
+              <!-- Code Link. -->
+              <span class="link-block">
+                <a href="https://github.com/shubhMaheshwari/UCSD-Fitness-Dataset" 
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fab fa-github"></i>
+                  </span>
+                  <span>Code</span>
+                  </a>
+              </span>
+              <!-- Dataset Link. -->
+              <span class="link-block">
+                <a href="#" onclick="alert('Coming soon')" 
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="far fa-images"></i>
+                  </span>
+                  <span>Data</span>
+                  </a>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="hero teaser">
+  <div class="container is-max-desktop">
+    <div class="hero-body">
+      <video id="teaser" autoplay muted loop playsinline height="100%">
+        <source src="./static/videos/demo.mp4"
+                type="video/mp4">
+      </video>
+      <h2 class="subtitle has-text-centered">
+        A novel constraint composition for motion diffusion to recommend clinically optimal body poses.
+      </h2>
+    </div>
+  </div>
+</section>
+
+
+
+
+<section class="section">
+  <div class="container is-max-desktop">
+
+    <!-- Paper video. -->
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Summary</h2>
+<!--         <div class="publication-video">
+          <iframe src="https://www.youtube.com/embed/MrKrnHhk8IA?rel=0&amp;showinfo=0"
+                  frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+        </div> -->
+      </div>
+    </div>
+    <!--/ Paper video. -->
+
+
+    <!-- Abstract. -->
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <div class="content has-text-justified">
+            
+          <p>
+            Recommending clinically optimal body motion can significantly improve an athlete's performance. The goal of our work is to suggest optimal body poses an athlete should perform. To distinguish between optimal and sub-optimal pose we use the Movement Competency Screen (MCS) to guide the generative model to produce motion with high fidelity and diversity. 
+          </p>
+
+          <ul>
+            <li>
+              <p>
+                We prosose a novel constraint composition formulation to incorporate multiple constraints like MCS Score and text prompt.  
+              </p>
+            </li>
+            <li>
+              <p>
+                Furthermore, we release a new dataset (OpenCap Dataset) encompassing more than 3000 high-quality human motion samples from 13 different primitive movements like Squats, Pull-ups, and Push-ups with their corresponding MCS Score labeled by experts.
+              </p> 
+            </li>
+            <li>
+              <p>
+                Our experiments show qualitative and quantitative improvement over baselines by incorporating constrain composition.
+              </p>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <!--/ Abstract. -->
+
+    <!-- Paper video. -->
+    <!-- <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Video</h2>
+        <div class="publication-video">
+          <iframe src="https://www.youtube.com/embed/a1-cUxHwvo8?rel=0&amp;showinfo=0"
+                  frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+        </div>
+      </div>
+    </div> -->
+    <!--/ Paper video. -->
+  </div>
+</section>
+
+
+
+
+
+
+<section class="section hero is-light">
+  <div class="container is-max-desktop">
+
+    <div class="columns is-centered">
+      <!-- Animation. -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3 has-text-centered">Dataset</h2>
+        <p>The datset comprises of over 3000 high-quality motion samples and 13 action labels. Each video is accompanied a "MCS Score," ranging from 1 to 5. This score serves as
+          a qualitative measure, with 1 indicating suboptimal movement and 5 representing an exemplary
+          execution of the specific action. 
+        </p>
+
+      
+    </div>
+    <!--/ Matting. -->
+  </div>
+</section>
+
+
+<section class="hero is-light is-small">
+  <div class="hero-body">
+    <div class="container is-max-desktop">
+      <div id="results-carousel" class="carousel results-carousel">
+        <div class="item item-quadrapeds">
+          <video poster="" id="quadrapeds" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/LLTF_1_smpl.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+        <div class="item item-teaser">
+          <video poster="" id="teaser" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/RLTF_1_smpl.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+        <div class="item item-bipeds">
+          <video poster="" id="bipeds" autoplay controls muted loop playsinline>
+            <source src="./static/videos/RSLS_1_smpl.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+
+        <div class="item item-doll">
+          <video poster="" id="doll" autoplay controls muted loop playsinline height="100%" width="100%">
+            <source src="./static/videos/LLT_1_smpl.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
+<section class="section hero is-light">
+  <div class="container is-max-desktop">
+
+    <div class="columns is-centered">
+      <!-- Animation. -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <p>The uniqueness of the OpenCap dataset lies in its focus on capturing
+          a diverse range of human motions, with an emphasis on activities commonly associated with physical
+          fitness. To ensure the dataset’s richness and authenticity, the motion samples were meticulously
+          recorded by observing athletes from the University of California, San Diego (UCSD) performing
+          various sports movements. 
+        </p>
+
+      
+    </div>
+    <!--/ Matting. -->
+  </div>
+</section>
+
+
+<section class="section">
+  <div class="container is-max-desktop has-text-centered">
+    <h2 class="title is-3"> Generating Style Tags </h2>
+    <div class="content has-text-justified">
+      <ul>
+        <li>
+          <p>
+          The style tags encompass both the exercise category (such as push-ups and squats) and the MCS scores assigned by experts.
+          </p>
+        </li>
+        <li>
+          <p>
+          We train 2 classifiers to predict the category and the MCS score.  
+          </p>
+        </li>
+      </ul>
+      <div class="content">
+        <img src="./static/images/classifier-comparision.png"
+              class="interpolation-image"
+              alt="Extracted Curve Skeleton"/>
+        <p class="is-centered">
+          The above table shows the accuracy between classifiers with different window size based.
+        </p>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+
+
+<section class="section hero">
+  <div class="container is-max-desktop">
+
+    <div class="columns is-centered">
+      <!-- Animation. -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3 has-text-centered">Comparisions</h2>
+
+        <!-- Static. -->
+        <h3 class="title is-4 has-text-centered">Constraint composition</h3>
+        <div class="content has-text-justified">
+          <img src="./static/images/kit-comparision.png"
+                 class="interpolation-image"
+                 alt="Interpolation end reference image."/>
+        </div>
+        <br/>
+        <!--/ Static. -->
+
+        <!-- Motion Skeleton. -->
+        <h3 class="title is-4 has-text-centered"> Stylized generatation</h3>
+        <div class="content has-text-justified">
+          <img src="./static/images/opecap-comparision.png"
+                 class="interpolation-image"
+                 alt="Interpolation end reference image."/>
+          <p>
+             Compared to motion skeleton extracted from other methods, by incorporating structural cues, ours is more effective at embedding skeleton from incomplete mesh sequence.
+          </p>
+        </div>
+        <!--/ Motion Skeleton. -->
+      
+    </div>
+    <!--/ Matting. -->
+  </div>
+</section>
+
+<section class="section  is-light" id="BibTeX">
+  <div class="container is-max-desktop content">
+    <h2 class="title">BibTeX</h2>
+    <pre><code>@article{,
+  author    = {Bhamidipati, Panini and Yu, Rose},
+  title     = {Style-based controllable motion generation},
+  journal   = {},
+  year      = {2024},
+}</code></pre>
+  </div>
+</section>
+
+
+<footer class="footer">
+  <div class="columns is-centered">
+    <div class="column is-8">
+      <div class="content">
+        <p>
+          This website is licensed under a <a rel="license"
+          href="http://creativecommons.org/licenses/by-sa/4.0/">Creative
+        Commons Attribution-ShareAlike 4.0 International License</a>.
+      </p>
+      <p>
+        Website source code based on the <a href="https://nerfies.github.io/"> Nerfies</a> project page. If you want to reuse their <a
+        href="https://github.com/nerfies/nerfies.github.io">source code</a>, please credit them appropriately.
+      </p>
+    </div>
+  </div>
+  </div>
+</footer>
+
+</body>
+</html>

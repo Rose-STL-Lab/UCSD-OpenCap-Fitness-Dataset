@@ -1,5 +1,6 @@
 import os 
 import sys
+import argparse
 import numpy as np 
 from tqdm import tqdm
 
@@ -27,14 +28,15 @@ from meters import Meters # Metrics to measure inverse kinematics
 from renderer import Visualizer
 
 class SMPLRetarget(nn.Module):
-	def __init__(self,batch_size,device='cpu'):
+	def __init__(self,batch_size,device=torch.device('cpu')):
 		super(SMPLRetarget, self).__init__()
 
 		# Create the SMPL layer
-		self.smpl_layer = SMPL_Layer(center_idx=0,gender='neutral',model_root=os.path.join(HOME_PATH,'smplpytorch/native/models')).to(device)
-		self.cfg = self.get_config(os.path.join(HOME_PATH,'Rajagopal_2016.json'))
+		self.smpl_layer = SMPL_Layer(center_idx=0,gender='neutral',model_root=os.path.join(HOME_DIR,'smplpytorch/native/models')).to(device)
+		self.cfg = self.get_config(os.path.join(HOME_DIR,'Rajagopal_2016.json'))
 
 		# Set utils
+		self.device = device
 		self.batch_size = batch_size
 
 		# Declare/Set/ parameters
@@ -133,7 +135,20 @@ class SMPLRetarget(nn.Module):
 			pickle.dump(res, f)	
 
 	def load(self,save_path):
-			
+
+		try: 
+			with open(save_path, 'rb') as f:
+				smpl_params = pickle.load(f)
+		except Exception as e: 
+			print(f"Unable to open smpl file:{save_path} Try deleting the file and rerun retargetting. Error:{e}")
+			raise
+
+		for k in smpl_params: 
+			smpl_params[k] = torch.from_numpy(smpl_params[k]).to(self.device)	
+
+		for k in self.smpl_params: 
+			self.smpl_params[k] = smpl_params[k]
+
 
 	def __repr__(self):
 		return f"Scale:{self.smpl_params['scale']} Trans:{self.smpl_params['trans'].mean(dim=0)} Betas:{self.smpl_params['shape_params']} Offset:{self.smpl_params['offset']}"        
@@ -259,10 +274,10 @@ def retarget_opencap2smpl(sample:OpenCapDataLoader):
 
 
 	# smplRetargetter.show(target,verts,Jtr,Jtr_offset)
-	if not os.path.isdir(SMPL_PATH):
-		os.makedirs(SMPL_PATH,exist_ok=True)
+	if not os.path.isdir(SMPL_DIR):
+		os.makedirs(SMPL_DIR,exist_ok=True)
 
-	save_path = os.path.join(SMPL_PATH,sample.name+'.pkl')
+	save_path = os.path.join(SMPL_DIR,sample.name+'.pkl')
 	logger.info(f'Saving results at:{save_path}')
 	smplRetargetter.save(save_path)	
 
@@ -287,7 +302,7 @@ def retarget_opencap2smpl(sample:OpenCapDataLoader):
 		writer.add_scalar(f"RAnkle-Y", float(smplRetargetter.smpl_params['pose_params'][i,8*3 + 1]),i )
 		writer.add_scalar(f"RAnkle-X", float(smplRetargetter.smpl_params['pose_params'][i,8*3 + 2]),i )
 
-	video_dir = os.path.join(RENDER_PATH,f"{sample.openCapID}_{sample.label}_{sample.mcs}")
+	video_dir = os.path.join(RENDER_DIR,f"{sample.openCapID}_{sample.label}_{sample.mcs}")
 
 	if RENDER:
 		vis.render_smpl(sample,smplRetargetter,video_dir=video_dir)        
@@ -300,21 +315,43 @@ def retarget_opencap2smpl(sample:OpenCapDataLoader):
 	writer.close()	
 
 
-	return smplRetargetter.smpl_params
+	return smplRetargetter
+
+
+def retarget_sample(sample_path):
+	sample = OpenCapDataLoader(sample_path)
+
+	if not os.path.isfile(os.path.join(SMPL_DIR,sample.name+'.pkl')) or cmd_line_args.force: 
+		sample.smpl = retarget_opencap2smpl(sample)
+	else:	
+		torch_device = torch.device('cuda' if cuda else 'cpu')	
+		sample.smpl = SMPLRetarget(sample.joints_np.shape[0],device=torch_device).to(torch_device)	
+		sample.smpl.load(os.path.join(SMPL_DIR,sample.name+'.pkl'))
+
+	return sample
 
 
 # Load file and render skeleton for each video
 def retarget_dataset():
-	for subject in os.listdir(DATASET_PATH):
-		for sample_path in os.listdir(os.path.join(DATASET_PATH,subject,'MarkerData')):
-			sample_path = os.path.join(DATASET_PATH,subject,'MarkerData',sample_path)
-			sample = OpenCapDataLoader(sample_path)
+	for subject in os.listdir(DATASET_DIR):
+		for sample_path in os.listdir(os.path.join(DATASET_DIR,subject,'MarkerData')):
+			sample_path = os.path.join(DATASET_DIR,subject,'MarkerData',sample_path)
+			sample = retarget_sample(sample_path)
 
-			if not os.path.isfile(os.path.join(SMPL_PATH,sample.name+'.pkl')): 
-				smpl_params = retarget_opencap2smpl(sample)
-				sample.smpl = smpl_params
 
-			sample.smpl = SMPLLoader(os.path.join(SMPL_PATH,sample.name+'.pkl'))
+
+############################# Command line Argument Parser #######################################################
+parser = argparse.ArgumentParser(
+					prog='Retargetting',
+					description='Retargets from SMPL to RaBit',
+					epilog='')
+parser.add_argument('-f', '--force',
+					action='store_true')  # on/off flag
+
+
+cmd_line_args = parser.parse_args(sys.argv[2:])
+
+
 
 if __name__ == "__main__": 
 
@@ -322,11 +359,5 @@ if __name__ == "__main__":
 		retarget_dataset()
 	else:
 		sample_path = sys.argv[1]
-		sample = OpenCapDataLoader(sample_path)
-
-		if not os.path.isfile(os.path.join(SMPL_PATH,sample.name+'.pkl')): 
-			smpl_params = retarget_opencap2smpl(sample)
-			sample.smpl = smpl_params
-	
-		sample.smpl = SMPLLoader(os.path.join(SMPL_PATH,sample.name+'.pkl'))	
+		sample = retarget_sample(sample_path)
 

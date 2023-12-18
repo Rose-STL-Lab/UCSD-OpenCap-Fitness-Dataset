@@ -154,7 +154,7 @@ class OpenCapDataLoader:
 class SMPLLoader: 
 	def __init__(self):
 		
-		self.samples = [ self.load_smpl(os.path.join(SMPL_PATH,file)) for file in os.listdir(SMPL_PATH)]
+		self.samples = [ self.load_smpl(os.path.join(SMPL_DIR,file)) for file in os.listdir(SMPL_DIR)]
 		self.videos = len(self.samples)
 
 		self.ind = 0
@@ -192,11 +192,11 @@ def analyze_dataset():
 
 	frames_distribution = {}
 
-	for subject in tqdm(os.listdir(DATASET_PATH)):
-		for sample_path in os.listdir(os.path.join(DATASET_PATH,subject,'MarkerData')):
+	for subject in tqdm(os.listdir(DATASET_DIR)):
+		for sample_path in os.listdir(os.path.join(DATASET_DIR,subject,'MarkerData')):
 
 			# TRC File analysis
-			sample_path = os.path.join(DATASET_PATH,subject,'MarkerData',sample_path)
+			sample_path = os.path.join(DATASET_DIR,subject,'MarkerData',sample_path)
 			sample = OpenCapDataLoader(sample_path)
 			
 			if sample.label not in frames_distribution: 
@@ -208,7 +208,7 @@ def analyze_dataset():
 
 
 			# SMPL File analysis
-			sample_path = os.path.join(SMPL_PATH,subject,'MarkerData',sample_path)
+			sample_path = os.path.join(SMPL_DIR,subject,'MarkerData',sample_path)
 			sample = OpenCapDataLoader(sample_path)
 
 
