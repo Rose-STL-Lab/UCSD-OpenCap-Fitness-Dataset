@@ -1,7 +1,16 @@
 # Sports Analytics Dataset 
-    - Interpolate between MCS scores 
-    - Each activity is divided 5 classes 
+ 
 
+[![](https://img.shields.io/badge/Project-Page-blue?style=flat&logo=Google%20chrome&logoColor=blue)](https://rose-stl-lab.github.io/UCSD-OpenCap-Fitness-Dataset/)
+[![](https://img.shields.io/badge/Paper-PDF-green?style=flat&logo=arXiv&logoColor=green)](https://www.overleaf.com/project/655aba246db8455baf77edd5)
+[![](https://img.shields.io/badge/Code-Github-red?style=flat&logo=github)](https://github.com/shubhMaheshwari/UCSD-Fitness-Dataset)
+[![](https://img.shields.io/badge/Dataset-Videos-pink)]()
+
+
+```
+- Interpolate between MCS scores 
+- Each activity is divided 5 classes 
+```
 
 ## OpenCap File Structure
 ```
@@ -80,6 +89,8 @@ python3 retarget.py <sample-filepath> # Specific trc file
 
 `<sample-filepath>` is the path to the trc file containing the xyz co-ordinates of each joint to plot
 
+[Click to download extracted SMPL data from TRC file](https://ucsdcloud-my.sharepoint.com/:u:/g/personal/shmaheshwari_ucsd_edu/EQ41wb0to2pHsLFhXmdTT2sB4jutOKR37ZLo7m6zv_X3hw) 
+
 
 
 ### 3. Data engineering 
@@ -88,6 +99,9 @@ python3 retarget.py <sample-filepath> # Specific trc file
 
 ## Data analysis
 - Mocap Capture 
+    - [Click to download multi-view RGB Videos and .mot](https://ucsdcloud-my.sharepoint.com/:f:/g/personal/zweatherford_ucsd_edu/EuHlQ1oahHBGgRTADJoImk8BclFRfX5VLFcI0_CbKiZ9Tg?e=q4lBjq)  
+
+
 #### TODO: Per sample pose reconstruction using PCA 
 
 #### TODO: Per sample per joint fourier analysis 
