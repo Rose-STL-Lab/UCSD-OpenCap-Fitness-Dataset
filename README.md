@@ -80,14 +80,17 @@ python3 renderer.py <sample-filepath> # Specific trc file
 ## 2. Retargetting  
 To retarget .trc file to SMPL format  
 ```
-python3 retarget.py # For complete dataset
+python3 src/retarget2smpl.py # For complete dataset
 ```
 Or 
 ```
-python3 retarget.py <sample-filepath> # Specific trc file
+python3 src/retarget2smpl.py  -f --file <sample-filepath> # Specific trc file 
 ```
 
+
 `<sample-filepath>` is the path to the trc file containing the xyz co-ordinates of each joint to plot
+
+`-f` forces a re-run on retargetting even if pkl file containg smpl data is already present.  
 
 [Click to download extracted SMPL data from TRC file](https://ucsdcloud-my.sharepoint.com/:u:/g/personal/shmaheshwari_ucsd_edu/EQ41wb0to2pHsLFhXmdTT2sB4jutOKR37ZLo7m6zv_X3hw) 
 
