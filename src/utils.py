@@ -19,10 +19,11 @@ sys.path.extend([HOME_DIR,RABIT_DIR,STYLEGAN_DIR])
 
 # ############################ FOLDER PATHS #######################################################
 # Files
-DATASET_DIR = os.path.join(HOME_DIR,'OpenSim') # Path containing all the training data (currently using xyz)
-SMPL_DIR = os.path.join(HOME_DIR,'SMPL')
-RENDER_DIR = os.path.join(HOME_DIR,'rendered_videos')
-LOG_DIR = os.path.join(HOME_DIR,'logs')
+DATA_DIR = os.path.join(HOME_DIR,'data')
+INPUT_DIR = os.path.join(DATA_DIR,'OpenSim') # Path containing all the training data (currently using xyz)
+SMPL_DIR = os.path.join(DATA_DIR,'SMPL')
+RENDER_DIR = os.path.join(DATA_DIR,'rendered_videos')
+LOG_DIR = os.path.join(DATA_DIR,'logs')
 
 
 # ############################ DATASET CONSTANTS #######################################################

@@ -192,11 +192,11 @@ def analyze_dataset():
 
 	frames_distribution = {}
 
-	for subject in tqdm(os.listdir(DATASET_DIR)):
-		for sample_path in os.listdir(os.path.join(DATASET_DIR,subject,'MarkerData')):
+	for subject in tqdm(os.listdir(INPUT_DIR)):
+		for sample_path in os.listdir(os.path.join(INPUT_DIR,subject,'MarkerData')):
 
 			# TRC File analysis
-			sample_path = os.path.join(DATASET_DIR,subject,'MarkerData',sample_path)
+			sample_path = os.path.join(INPUT_DIR,subject,'MarkerData',sample_path)
 			sample = OpenCapDataLoader(sample_path)
 			
 			if sample.label not in frames_distribution: 
