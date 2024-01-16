@@ -422,9 +422,9 @@ def retarget_smpl2rabit(sample:OpenCapDataLoader):
 
 # Load file and render skeleton for each video
 def retarget_dataset():
-	for subject in os.listdir(DATASET_DIR):
-		for sample_path in os.listdir(os.path.join(DATASET_DIR,subject,'MarkerData')):
-			sample_path = os.path.join(DATASET_DIR,subject,'MarkerData',sample_path)
+	for subject in os.listdir(INPUT_DIR):
+		for sample_path in os.listdir(os.path.join(INPUT_DIR,subject,'MarkerData')):
+			sample_path = os.path.join(INPUT_DIR,subject,'MarkerData',sample_path)
 			sample = OpenCapDataLoader(sample_path)
 			
 			if not os.path.isfile(os.path.join(SMPL_DIR,sample.name+'.pkl')): 

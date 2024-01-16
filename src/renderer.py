@@ -301,9 +301,9 @@ def render_dataset():
 	
 	vis = Visualizer()
 	
-	for subject in os.listdir(DATASET_DIR):
-		for sample_path in os.listdir(os.path.join(DATASET_DIR,subject,'MarkerData')):
-			sample_path = os.path.join(DATASET_DIR,subject,'MarkerData',sample_path)
+	for subject in os.listdir(INPUT_DIR):
+		for sample_path in os.listdir(os.path.join(INPUT_DIR,subject,'MarkerData')):
+			sample_path = os.path.join(INPUT_DIR,subject,'MarkerData',sample_path)
 			sample = OpenCapDataLoader(sample_path)
 			vis.render_skeleton(sample,video_dir=video_dir)
 		

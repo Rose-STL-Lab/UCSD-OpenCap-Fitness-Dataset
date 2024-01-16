@@ -33,7 +33,7 @@ class SMPLRetarget(nn.Module):
 
 		# Create the SMPL layer
 		self.smpl_layer = SMPL_Layer(center_idx=0,gender='neutral',model_root=os.path.join(HOME_DIR,'smplpytorch/native/models')).to(device)
-		self.cfg = self.get_config(os.path.join(HOME_DIR,'Rajagopal_2016.json'))
+		self.cfg = self.get_config(os.path.join(DATA_DIR,'Rajagopal_2016.json'))
 
 		# Set utils
 		self.device = device
@@ -333,9 +333,9 @@ def retarget_sample(sample_path):
 
 # Load file and render skeleton for each video
 def retarget_dataset():
-	for subject in os.listdir(DATASET_DIR):
-		for sample_path in os.listdir(os.path.join(DATASET_DIR,subject,'MarkerData')):
-			sample_path = os.path.join(DATASET_DIR,subject,'MarkerData',sample_path)
+	for subject in os.listdir(INPUT_DIR):
+		for sample_path in os.listdir(os.path.join(INPUT_DIR,subject,'MarkerData')):
+			sample_path = os.path.join(INPUT_DIR,subject,'MarkerData',sample_path)
 			sample = retarget_sample(sample_path)
 
 if __name__ == "__main__": 
