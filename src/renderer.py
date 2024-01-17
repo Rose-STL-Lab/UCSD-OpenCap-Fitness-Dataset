@@ -7,6 +7,7 @@ import trimesh
 
 from utils import * 
 from dataloader import OpenCapDataLoader
+from smpl_loader import SMPLRetarget
 
 class Visualizer: 
 	def __init__(self): 
@@ -156,54 +157,53 @@ class Visualizer:
 		print(f"Running Command:",f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse {video_path}")
 
 
-	def render_rabit(self,sample,video_dir=None): 
+	def render_smpl_multi_view(self,sample,smplRetargetter,video_dir=None):
 
-		T = sample.num_frames
+		target = sample.joints_np
+		verts,Jtr,Jtr_offset = smplRetargetter()
 
-		# Get bounding box and object position 
-		smpl_verts,smpl_joints,_ = sample.smpl()
-		smpl_verts = smpl_verts.cpu().data.numpy()
-		smpl_joints = smpl_joints.cpu().data.numpy()
-
-		# Load 0th frame and get params
-		sample.rabit.load_smpl_params(sample.smpl.smpl_params,0)
-		rabit_verts = sample.rabit.verts
-		rabit_joints = sample.rabit.J
-
-
-		bbox_smpl = smpl_verts.max(axis=(0,1))  - smpl_verts.min(axis=(0,1))
-		bbox_target = rabit_verts.max(axis=0)  - rabit_verts.min(axis=0)
-
-		bbox = bbox_smpl if np.linalg.norm(bbox_smpl) > np.linalg.norm(bbox_target) else bbox_target
-
-		object_position = sample.joints_np[0,0]
+		verts = verts.cpu().data.numpy()
+		if not hasattr(self,'ps_data'):
+			# Initialize Plot SMPL in polyscope
+			ps.init()
+			self.ps_data = {}
+			self.ps_data['bbox'] = verts.max(axis=(0,1)) - verts.min(axis=(0,1))
+			self.ps_data['object_position'] = sample.joints_np[0,0]
 
 		# camera_position = np.array([0,0,3*self.ps_data['bbox'][0]])
-		camera_position = np.array([7*bbox[0],0,0]) + object_position
-		look_at_position = np.array([0,0,0]) + object_position
+		camera_position = np.array([7*self.ps_data['bbox'][0],0.5*self.ps_data['bbox'][1],0]) + self.ps_data['object_position']
+		look_at_position = np.array([0,0,0]) + self.ps_data['object_position']
 		ps.look_at(camera_position,look_at_position)
 
-		# Translate objects to visualize 
-		smpl_joints += (np.array([0,0,+0.5])*bbox).reshape((1,-1,3))  
-		smpl_verts += (np.array([0, 0, +0.5]) * bbox).reshape((1,-1,3))
+		Jtr = Jtr.cpu().data.numpy() + np.array([0,0,0])*self.ps_data['bbox']
 
-		rabit_joints += (np.array([0,0,-0.5])*bbox).reshape((1,3))  
-		rabit_verts += (np.array([0, 0, -0.5]) * bbox).reshape((1,3))
+		verts += np.array([0, 0, 0]) * self.ps_data['bbox']
+		# target_joints = target - target[:,7:8,:] + Jtr[:,0:1,:] + np.array([0,0,0])*self.ps_data['bbox']
+		target_joints = target + np.array([0,0,0])*self.ps_data['bbox']
 
+		Jtr_offset = Jtr_offset[:,smplRetargetter.index['smpl_index']].cpu().data.numpy() + np.array([0.0,0,0])*self.ps_data['bbox']       
+		# Jtr_offset = Jtr_offset.cpu().data.numpy() + np.array([0,0,0])*self.ps_data['bbox']       
 
-		# Initial plot
 		ps.remove_all_structures()
-		ps_smpl_mesh = ps.register_surface_mesh('SMPL Mesh',smpl_verts[0],sample.smpl.smpl_layer.smpl_data['f'],transparency=0.5)
+		ps_mesh = ps.register_surface_mesh('mesh',verts[0],smplRetargetter.smpl_layer.smpl_data['f'],transparency=0.5)
 		
-		smpl_bone_array = np.array([[i,p] for i,p in enumerate(sample.smpl.index['parent_array'])])
-		ps_smpl_skeleton = ps.register_curve_network(f"SMPL Skeleton",smpl_joints[0],smpl_bone_array,color=np.array([1,0,0]))
+
+		target_bone_array = np.array([[i,p] for i,p in enumerate(smplRetargetter.index['dataset_parent_array'])])
+		ps_target_skeleton = ps.register_curve_network(f"Target Skeleton",target_joints[0],target_bone_array,color=np.array([0,0,1]))
+
+		smpl_bone_array = np.array([[i,p] for i,p in enumerate(smplRetargetter.index['parent_array'])])
+		ps_smpl_skeleton = ps.register_curve_network(f"Smpl Skeleton",Jtr[0],smpl_bone_array,color=np.array([1,0,0]))
+
+		smpl_index = list(smplRetargetter.index['smpl_index'].cpu().data.numpy())    
+
+		offset_skeleton_bones = np.array([[x,smpl_index.index(smplRetargetter.index['parent_array'][i])] for x,i in enumerate(smpl_index) if smplRetargetter.index['parent_array'][i] in smpl_index])
+		ps_offset_skeleton = ps.register_curve_network(f"Offset Skeleton",Jtr_offset[0],offset_skeleton_bones,color=np.array([1,1,0]))
 
 
-		ps_rabit_mesh = ps.register_surface_mesh('RaBit Mesh',rabit_verts,sample.rabit._faces,transparency=0.5)
-		
-		rabit_bone_array = np.array([[i,p] for i,p in enumerate(sample.smpl.index['parent_array'])])
-		ps_rabit_skeleton = ps.register_curve_network(f"RaBit Skeleton",rabit_joints,rabit_bone_array,color=np.array([1,0,0]))
-
+		dataset_index = list(smplRetargetter.index['dataset_index'].cpu().data.numpy())    		
+		joint_mapping = np.concatenate([target_joints[0,dataset_index],Jtr_offset[0]],axis=0)
+		joint_mapping_edges = np.array([(i,joint_mapping.shape[0]//2+i) for i in range(joint_mapping.shape[0]//2)])
+		ps_joint_mapping = ps.register_curve_network(f"Mapping (target- smpl) joints",joint_mapping,joint_mapping_edges,radius=0.001,color=np.array([0,1,0]))
 
 		if video_dir is None:
 			ps.show()
@@ -243,58 +243,6 @@ class Visualizer:
 
 
 
-
-
-
-
-class VisualizerTrimesh: 
-	def __init__(self): 
-		
-		self.scene = trimesh.Scene()
-
-	def render_with_texture(pose_data):
-		# Load Random RaBit Model and render 
-		window_conf = gl.Config(double_buffer=True, depth_size=6)
-			
-
-		rabit = RaBitModel()
-		texture_util.generate_texture("output/m_t.png") # Create a random texture
-
-		beta = np.random.rand(*(500,)) * 10 - 5
-		# beta[10:] = smpl.smpl_params['shape']
-		# beta[10:] = 0
-		
-		trans = np.zeros(rabit.trans_shape)
-
-
-		vis.render_with_texture() # Only possible using trimesh for now 
-
-		os.makedirs("output/renderings", exist_ok=True)
-		for i,theta in enumerate(pose_data): 
-			if i % 50 == 0: 
-				print(f"Rendering:{i} frame")
-			rabit.set_params(beta=beta, pose=theta, trans=trans)
-			rabit.save_to_obj_with_texture(save_path)
-			
-			tmesh = trimesh.load(save_path)
-
-			scene.add_geometry(tmesh,"RaBit") 
-
-
-			# increment the file name
-			file_name = "output/renderings/render_" + str(i) + ".png"
-			# save a render of the object as a png
-			png = scene.save_image(resolution=[1920, 1080], visible=True)
-			with open(file_name, "wb") as f:
-				f.write(png)
-				f.close()
-
-			scene.delete_geometry(['m_t.obj'])
-
-
-		os.system(f"ffmpeg -y -framerate 60 -i output/renderings/render_\%d.png output/video.mp4")
-
-
 # Load file and render skeleton for each video
 def render_dataset():
 	video_dir = 'rendered_videos'
@@ -303,9 +251,23 @@ def render_dataset():
 	
 	for subject in os.listdir(INPUT_DIR):
 		for sample_path in os.listdir(os.path.join(INPUT_DIR,subject,'MarkerData')):
+			# Input 
 			sample_path = os.path.join(INPUT_DIR,subject,'MarkerData',sample_path)
 			sample = OpenCapDataLoader(sample_path)
-			vis.render_skeleton(sample,video_dir=video_dir)
+			
+			# Visualize Target skeleton
+			# vis.render_skeleton(sample,video_dir=video_dir)
+
+
+			# Load SMPL
+			sample.smpl = SMPLRetarget(sample.joints_np.shape[0],device=None)	
+			sample.smpl.load(os.path.join(SMPL_DIR,sample.name+'.pkl'))
+
+			# Vis SMPL
+			vis.render_smpl(sample,sample.smpl,video_dir=video_dir)
+
+
+			vis.render_smpl_multi_view(sample,video_dir=video_dir)		 
 		
 	
 
@@ -321,4 +283,5 @@ if __name__ == "__main__":
 
 		vis = Visualizer()
 		video_dir = sys.argv[2] if len(sys.argv) > 2 else None
-		vis.render_skeleton(sample,video_dir=video_dir)		 
+		# vis.render_skeleton(sample,video_dir=video_dir)		 
+		vis.render_smpl_multi_view(sample,video_dir=video_dir)		 
