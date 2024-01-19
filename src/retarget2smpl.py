@@ -176,7 +176,7 @@ def retarget_opencap2smpl(sample:OpenCapDataLoader):
 		writer.add_scalar(f"RAnkle-Y", float(smplRetargetter.smpl_params['pose_params'][i,8*3 + 1]),i )
 		writer.add_scalar(f"RAnkle-X", float(smplRetargetter.smpl_params['pose_params'][i,8*3 + 2]),i )
 
-	video_dir = os.path.join(RENDER_DIR,f"{sample.openCapID}_{sample.label}_{sample.mcs}")
+	video_dir = os.path.join(RENDER_DIR,f"{sample.openCapID}_{sample.label}_{sample.recordAttempt}")
 
 	if RENDER:
 		vis.render_smpl(sample,smplRetargetter,video_dir=video_dir)        

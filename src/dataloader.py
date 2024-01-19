@@ -3,10 +3,13 @@ import re
 import sys
 from tqdm import tqdm
 import numpy as np 
+from functools import lru_cache
+
 
 # File loaders
+import yaml
 import pickle 
-
+import joblib
 
 # DL Modules 
 
@@ -14,7 +17,7 @@ import pickle
 from utils import * # All hyperparameters and paths are defined here
 
 
-# Regex parse filename to get category and mcs score
+# Regex parse filename to get category and recordAttempt score
 FIND_LABEL_REGEX = r'^([A-Z]+)([0-9]+)(_([0-9]+))?\.trc$'
 """
 Explanation of the pattern:
@@ -37,9 +40,10 @@ class OpenCapDataLoader:
 		assert os.path.isfile(sample_path), f"File:{sample_path} does not exist"
 
 
+		self.sample_path = sample_path
 
-		self.openCapID,self.label,self.mcs,self.sample = self.load_trc(sample_path)
-		self.name = f"{self.openCapID}_{self.label}_{self.mcs}"
+		self.openCapID,self.label,self.recordAttempt,self.sample = self.load_trc(sample_path)
+		self.name = f"{self.openCapID}_{self.label}_{self.recordAttempt}"
 		self.frames,self.joints,self.joints_np = self.process_trc(self.sample) 
 
 		self.joint2ind = dict([ (x,i) for i,x in enumerate(JOINT_NAMES)])
@@ -60,11 +64,11 @@ class OpenCapDataLoader:
 			file_components = list(match.groups())
 
 			label = file_components[0]
-			mcs = int(file_components[1])
+			recordAttempt = int(file_components[1])
 
 			if file_components[2] is not None:
 				print(f"Weird filename:{sample_path}")
-			return label,mcs
+			return label,recordAttempt
 	
 		else: 
 			raise KeyError(f'{sample_path} does not match regex')
@@ -80,7 +84,7 @@ class OpenCapDataLoader:
 		openCapID = next(filter(lambda x: "OpenCapData" in x,sample_path.split('/')))
 		openCapID = openCapID.split('_')[-1]
 
-		label,mcs = OpenCapDataLoader.get_label(os.path.basename(sample_path))
+		label,recordAttempt = OpenCapDataLoader.get_label(os.path.basename(sample_path))
 
 
 		# Open file and load xyz co-ordinate for every joint
@@ -107,7 +111,7 @@ class OpenCapDataLoader:
 				
 				sample.append(pose)
 
-		return openCapID,label,mcs,sample
+		return openCapID,label,recordAttempt,sample
 			
 
 	def process_trc(self,sample):
@@ -148,6 +152,95 @@ class OpenCapDataLoader:
 		return frames,joints,joint_np
 
 
+class MultiviewRGB: 
+	def __init__(self,sample):
+
+		self.sample_path = sample.sample_path
+		self.session_data = self.load_subjectID(sample.sample_path)
+		self.video_paths = self.get_video_paths(self.session_data)
+		self.cameras = self.get_camera_paths(sample.sample_path)
+
+	def load_subjectID(self,sample_path):
+		
+		session_path = os.path.dirname(sample_path)
+		session_path = os.path.dirname(session_path)
+		session_path = os.path.join(session_path,'sessionMetadata.yaml')
+		
+		assert os.path.isfile(session_path), f"Session path:{session_path} for sample:{session_path} does not exist"
+
+		with open(session_path, "r") as stream:
+			try:
+				session_data = yaml.safe_load(stream)
+			except yaml.YAMLError as exc:
+				print(exc)
+
+		return session_data
+	
+	def get_video_paths(self,session_data):
+		opencap_input_path = os.path.join(DATA_DIR,"OpenCap",session_data['subjectID'])
+		video_paths = []
+
+		ls_opencap_input_path = [ file for file in os.listdir(opencap_input_path) if "cam" in file.lower()]
+		ls_opencap_input_path = sorted(ls_opencap_input_path, key=lambda x: int(x.lower().replace("cam","")))
+
+		for d in ls_opencap_input_path:
+		
+			mov_file = [file for file in os.listdir(os.path.join(opencap_input_path, d))]
+			if len(mov_file) == 0: continue
+
+			mov_file = os.path.join(opencap_input_path,d,mov_file[0])
+			if not os.path.isdir(mov_file): continue
+
+			mov_name = [file for file in os.listdir(mov_file) if 'mov' in file ]
+			if len(mov_file) == 0: continue
+			mov_name = mov_name[0]
+
+			mov_file = os.path.join(mov_file,mov_name)
+
+			assert os.path.isfile(mov_file), f"Mov file:{mov_file} does not exist"
+
+			video_paths.append(mov_file)
+		
+		# Make sure video paths are valid 
+		assert all([ os.path.isfile(file) for file in video_paths]), f"video paths do not exist. Check:{video_paths[0]} is an mp4" 	
+
+		return video_paths
+
+	def get_camera_paths(self,sample_path): 
+		
+		# Get path to camera pickle files 
+		camera_dir = os.path.dirname(self.sample_path)
+		camera_dir = os.path.dirname(camera_dir)
+		camera_dir = os.path.join(camera_dir,'Videos')
+
+		# Get filenames corresponding to each video 
+		camera_filenames = self.video_paths
+		camera_filenames = [os.path.dirname(file) for file in camera_filenames]
+		camera_filenames = [os.path.dirname(file) for file in camera_filenames]
+		camera_filenames = [os.path.basename(file) for file in camera_filenames]
+
+		camera_filenames = [os.path.join(camera_dir,file) for file in camera_filenames]
+		
+		# Make sure directories are valid 
+		assert all([ os.path.isdir(dir) for dir in camera_filenames]), f"Camera paths not directory. Check:{camera_filenames[0]} is an mp4" 	
+
+		cameras = []
+		for dir in camera_filenames: 
+			pickle_files = [ file for file in os.listdir(dir) if 'pickle' in file]
+			assert len(pickle_files) == 1, f"Unable to find pickle file in {dir}" 
+ 
+			camera_filepath = pickle_files[0]
+			camera_filepath = os.path.join(dir, camera_filepath)
+
+			assert os.path.isfile(camera_filepath), f"Unable to find pickle file:{camera_filepath}" 
+			
+			camera = joblib.load(camera_filepath)
+			cameras.append(camera)
+		
+		return cameras
+				 
+
+
 # Converts SMPL parameters to Input representation 
 
 
@@ -162,11 +255,11 @@ class SMPLLoader:
 	@staticmethod
 	def load_smpl(sample_path): 
 		assert '.pkl' == sample_path[:-4], f"Filename:{sample_path} not a pickle file" 
-		subjectID,label,mcs = sample_path.split('.')[0].split('_')
-		name = f"{openCapID}_{label}_{mcs}"
+		subjectID,label,recordAttempt = sample_path.split('.')[0].split('_')
+		name = f"{openCapID}_{label}_{recordAttempt}"
 		with open(save_path, 'r') as f:
 			data = pickle.load(f)	
-		return [subjectID, label,mcs,name, SMPLLoader.process_smpl(data)] 
+		return [subjectID, label,recordAttempt,name, SMPLLoader.process_smpl(data)] 
 
 	@staticmethod 
 	def process_smpl(data):
@@ -201,10 +294,10 @@ def analyze_dataset():
 			
 			if sample.label not in frames_distribution: 
 				frames_distribution[sample.label] = {}
-			if sample.mcs not in frames_distribution[sample.label]: 
-				frames_distribution[sample.label][sample.mcs] = []
+			if sample.recordAttempt not in frames_distribution[sample.label]: 
+				frames_distribution[sample.label][sample.recordAttempt] = []
 
-			frames_distribution[sample.label][sample.mcs].append(sample.num_frames)
+			frames_distribution[sample.label][sample.recordAttempt].append(sample.num_frames)
 
 
 			# SMPL File analysis

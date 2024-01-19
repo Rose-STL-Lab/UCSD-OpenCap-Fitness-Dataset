@@ -6,7 +6,7 @@ import polyscope as ps
 import trimesh 
 
 from utils import * 
-from dataloader import OpenCapDataLoader
+from dataloader import OpenCapDataLoader,MultiviewRGB
 from smpl_loader import SMPLRetarget
 
 class Visualizer: 
@@ -47,7 +47,7 @@ class Visualizer:
 			ps.show()
 			return 
 
-		video_dir = os.path.join(video_dir,f"{sample.openCapID}_{sample.label}_{sample.mcs}")
+		video_dir = os.path.join(video_dir,f"{sample.openCapID}_{sample.label}_{sample.recordAttempt}")
 		os.makedirs(video_dir,exist_ok=True)
 		os.makedirs(os.path.join(video_dir,"images"),exist_ok=True)
 		os.makedirs(os.path.join(video_dir,"video"),exist_ok=True)
@@ -147,7 +147,7 @@ class Visualizer:
 			# 	ps.show()
 
 		image_path = os.path.join(video_dir,"images",f"smpl_\%d.png")
-		video_path = os.path.join(video_dir,"video",f"{sample.label}_{sample.mcs}_smpl.mp4")
+		video_path = os.path.join(video_dir,"video",f"{sample.label}_{sample.recordAttempt}_smpl.mp4")
 		palette_path = os.path.join(video_dir,"video",f"smpl.png")
 		frame_rate = sample.fps
 		os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -vf palettegen {palette_path}")
@@ -157,10 +157,14 @@ class Visualizer:
 		print(f"Running Command:",f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse {video_path}")
 
 
-	def render_smpl_multi_view(self,sample,smplRetargetter,video_dir=None):
+	def render_smpl_multi_view(self,sample,video_dir=None):
+
+		assert hasattr(sample,'smpl'), "SMPL data not saved. run retarget2smpl.py first"
+		assert hasattr(sample,'rgb'), "Error loading RGB Data. Don't know the camera details. Cannot render in multiple views"
+
 
 		target = sample.joints_np
-		verts,Jtr,Jtr_offset = smplRetargetter()
+		verts,Jtr,Jtr_offset = sample.smpl()
 
 		verts = verts.cpu().data.numpy()
 		if not hasattr(self,'ps_data'):
@@ -181,26 +185,26 @@ class Visualizer:
 		# target_joints = target - target[:,7:8,:] + Jtr[:,0:1,:] + np.array([0,0,0])*self.ps_data['bbox']
 		target_joints = target + np.array([0,0,0])*self.ps_data['bbox']
 
-		Jtr_offset = Jtr_offset[:,smplRetargetter.index['smpl_index']].cpu().data.numpy() + np.array([0.0,0,0])*self.ps_data['bbox']       
+		Jtr_offset = Jtr_offset[:,sample.smpl.index['smpl_index']].cpu().data.numpy() + np.array([0.0,0,0])*self.ps_data['bbox']       
 		# Jtr_offset = Jtr_offset.cpu().data.numpy() + np.array([0,0,0])*self.ps_data['bbox']       
 
 		ps.remove_all_structures()
-		ps_mesh = ps.register_surface_mesh('mesh',verts[0],smplRetargetter.smpl_layer.smpl_data['f'],transparency=0.5)
+		ps_mesh = ps.register_surface_mesh('mesh',verts[0],sample.smpl.smpl_layer.smpl_data['f'],transparency=0.5)
 		
 
-		target_bone_array = np.array([[i,p] for i,p in enumerate(smplRetargetter.index['dataset_parent_array'])])
+		target_bone_array = np.array([[i,p] for i,p in enumerate(sample.smpl.index['dataset_parent_array'])])
 		ps_target_skeleton = ps.register_curve_network(f"Target Skeleton",target_joints[0],target_bone_array,color=np.array([0,0,1]))
 
-		smpl_bone_array = np.array([[i,p] for i,p in enumerate(smplRetargetter.index['parent_array'])])
+		smpl_bone_array = np.array([[i,p] for i,p in enumerate(sample.smpl.index['parent_array'])])
 		ps_smpl_skeleton = ps.register_curve_network(f"Smpl Skeleton",Jtr[0],smpl_bone_array,color=np.array([1,0,0]))
 
-		smpl_index = list(smplRetargetter.index['smpl_index'].cpu().data.numpy())    
+		smpl_index = list(sample.smpl.index['smpl_index'].cpu().data.numpy())    
 
-		offset_skeleton_bones = np.array([[x,smpl_index.index(smplRetargetter.index['parent_array'][i])] for x,i in enumerate(smpl_index) if smplRetargetter.index['parent_array'][i] in smpl_index])
+		offset_skeleton_bones = np.array([[x,smpl_index.index(sample.smpl.index['parent_array'][i])] for x,i in enumerate(smpl_index) if sample.smpl.index['parent_array'][i] in smpl_index])
 		ps_offset_skeleton = ps.register_curve_network(f"Offset Skeleton",Jtr_offset[0],offset_skeleton_bones,color=np.array([1,1,0]))
 
 
-		dataset_index = list(smplRetargetter.index['dataset_index'].cpu().data.numpy())    		
+		dataset_index = list(sample.smpl.index['dataset_index'].cpu().data.numpy())    		
 		joint_mapping = np.concatenate([target_joints[0,dataset_index],Jtr_offset[0]],axis=0)
 		joint_mapping_edges = np.array([(i,joint_mapping.shape[0]//2+i) for i in range(joint_mapping.shape[0]//2)])
 		ps_joint_mapping = ps.register_curve_network(f"Mapping (target- smpl) joints",joint_mapping,joint_mapping_edges,radius=0.001,color=np.array([0,1,0]))
@@ -231,7 +235,7 @@ class Visualizer:
 			# 	ps.show()
 
 		image_path = os.path.join(video_dir,"images",f"smpl_\%d.png")
-		video_path = os.path.join(video_dir,"video",f"{sample.label}_{sample.mcs}_smpl.mp4")
+		video_path = os.path.join(video_dir,"video",f"{sample.label}_{sample.recordAttempt}_smpl.mp4")
 		palette_path = os.path.join(video_dir,"video",f"smpl.png")
 		frame_rate = sample.fps
 		os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -vf palettegen {palette_path}")
@@ -263,11 +267,16 @@ def render_dataset():
 			sample.smpl = SMPLRetarget(sample.joints_np.shape[0],device=None)	
 			sample.smpl.load(os.path.join(SMPL_DIR,sample.name+'.pkl'))
 
-			# Vis SMPL
-			vis.render_smpl(sample,sample.smpl,video_dir=video_dir)
+			# Visualize SMPL
+			# vis.render_smpl(sample,sample.smpl,video_dir=video_dir)
+			
+			
+			# Load Video
+			sample.rgb = MultiviewRGB(sample)
 
-
-			vis.render_smpl_multi_view(sample,video_dir=video_dir)		 
+			# Visualize each view  
+			vis.render_smpl_multi_view(sample,video_dir=None)
+			# vis.render_smpl_multi_view(sample,video_dir=video_dir)		 
 		
 	
 
