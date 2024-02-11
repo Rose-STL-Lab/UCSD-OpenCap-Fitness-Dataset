@@ -19,7 +19,7 @@ class Visualizer:
 		ps.set_automatically_compute_scene_extents(True)
 		ps.set_navigation_style("free")
 		# ps.set_view_projection_mode("orthographic")
-		ps.set_ground_plane_mode('shadow_only')
+		# ps.set_ground_plane_mode('shadow_only')
 
 	def render_skeleton(self,sample,video_dir=None,screen_scale=[1.4,1.0,1.0],frame_rate=60): 
 		"""
@@ -174,10 +174,13 @@ class Visualizer:
 			self.ps_data['bbox'] = verts.max(axis=(0,1)) - verts.min(axis=(0,1))
 			self.ps_data['object_position'] = sample.joints_np[0,0]
 
+		ps.remove_all_structures()
 		# camera_position = np.array([0,0,3*self.ps_data['bbox'][0]])
 		camera_position = np.array([7*self.ps_data['bbox'][0],0.5*self.ps_data['bbox'][1],0]) + self.ps_data['object_position']
 		look_at_position = np.array([0,0,0]) + self.ps_data['object_position']
 		ps.look_at(camera_position,look_at_position)
+
+
 
 		Jtr = Jtr.cpu().data.numpy() + np.array([0,0,0])*self.ps_data['bbox']
 
@@ -188,7 +191,6 @@ class Visualizer:
 		Jtr_offset = Jtr_offset[:,sample.smpl.index['smpl_index']].cpu().data.numpy() + np.array([0.0,0,0])*self.ps_data['bbox']       
 		# Jtr_offset = Jtr_offset.cpu().data.numpy() + np.array([0,0,0])*self.ps_data['bbox']       
 
-		ps.remove_all_structures()
 		ps_mesh = ps.register_surface_mesh('mesh',verts[0],sample.smpl.smpl_layer.smpl_data['f'],transparency=0.5)
 		
 
@@ -208,6 +210,18 @@ class Visualizer:
 		joint_mapping = np.concatenate([target_joints[0,dataset_index],Jtr_offset[0]],axis=0)
 		joint_mapping_edges = np.array([(i,joint_mapping.shape[0]//2+i) for i in range(joint_mapping.shape[0]//2)])
 		ps_joint_mapping = ps.register_curve_network(f"Mapping (target- smpl) joints",joint_mapping,joint_mapping_edges,radius=0.001,color=np.array([0,1,0]))
+
+
+		# Set indivdual cameras 
+		for i,camera in enumerate(sample.rgb.cameras): 
+			intrinsics = ps.CameraIntrinsics(fov_vertical_deg=camera['fov_x'], fov_horizontal_deg=camera['fov_y'])
+			# extrinsics = ps.CameraExtrinsics(mat=np.eye(4))
+			extrinsics = ps.CameraExtrinsics(root=camera['position'], look_dir=camera['look_dir'], up_dir=camera['up_dir'])
+			params = ps.CameraParameters(intrinsics, extrinsics)
+			ps_cam = ps.register_camera_view(f"Cam{i}", params)
+			print("Camera:",params.get_view_mat())
+
+
 
 		if video_dir is None:
 			ps.show()
@@ -257,27 +271,45 @@ def render_dataset():
 		for sample_path in os.listdir(os.path.join(INPUT_DIR,subject,'MarkerData')):
 			# Input 
 			sample_path = os.path.join(INPUT_DIR,subject,'MarkerData',sample_path)
-			sample = OpenCapDataLoader(sample_path)
+			render_smpl(sample_path,vis,video_dir=video_dir)
+
+def render_smpl(sample_path,vis,video_dir=None): 
+	"""
+		Render dataset samples 
 			
-			# Visualize Target skeleton
-			# vis.render_skeleton(sample,video_dir=video_dir)
-
-
-			# Load SMPL
-			sample.smpl = SMPLRetarget(sample.joints_np.shape[0],device=None)	
-			sample.smpl.load(os.path.join(SMPL_DIR,sample.name+'.pkl'))
-
-			# Visualize SMPL
-			# vis.render_smpl(sample,sample.smpl,video_dir=video_dir)
-			
-			
-			# Load Video
-			sample.rgb = MultiviewRGB(sample)
-
-			# Visualize each view  
-			vis.render_smpl_multi_view(sample,video_dir=None)
-			# vis.render_smpl_multi_view(sample,video_dir=video_dir)		 
+		@params
+			sample_path: Filepath of input
+			video_dir: Folder to store Render results for the complete worflow  
 		
+			
+		Load input (currently .trc files) and save all the rendering videos + images (retargetting to smp, getting input text, per frame annotations etc.) 
+	"""
+	sample = OpenCapDataLoader(sample_path)
+	
+	# Visualize Target skeleton
+	# vis.render_skeleton(sample,video_dir=video_dir)
+
+
+	# Load SMPL
+	sample.smpl = SMPLRetarget(sample.joints_np.shape[0],device=None)	
+	sample.smpl.load(os.path.join(SMPL_DIR,sample.name+'.pkl'))
+
+	# Visualize SMPL
+	# vis.render_smpl(sample,sample.smpl,video_dir=video_dir)
+	
+	
+	# Load Video
+	sample.rgb = MultiviewRGB(sample)
+
+	print(f"SubjectID:{sample.rgb.session_data['subjectID']} Action:{sample.label}")
+
+	# Visualize each view  
+	vis.render_smpl_multi_view(sample,video_dir=None)
+	
+	
+	
+	# vis.render_smpl_multi_view(sample,video_dir=video_dir)
+
 	
 
 
@@ -288,9 +320,7 @@ if __name__ == "__main__":
 		render_dataset()
 	else:
 		sample_path = sys.argv[1]
-		sample = OpenCapDataLoader(sample_path)
-
 		vis = Visualizer()
 		video_dir = sys.argv[2] if len(sys.argv) > 2 else None
-		# vis.render_skeleton(sample,video_dir=video_dir)		 
-		vis.render_smpl_multi_view(sample,video_dir=video_dir)		 
+		render_smpl(sample_path,vis,video_dir)
+

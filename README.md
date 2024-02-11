@@ -20,7 +20,14 @@
 - Add docs using MKLdocsString 
 - Create best visualization portal. 
 
-## OpenCap File Structure
+
+## Dataset 
+
+To download the dataset use the following links: 
+1. [OpenCap Master]: https://docs.google.com/spreadsheets/d/1vkZ4-cdH2RjEOTZWhoYnSdXn8ruz9VFXZW7tg9fRYPE/edit?usp=sharing
+2. [OpenCap]
+
+### OpenCap File Structure
 ```
 .
 ├── full_data
@@ -130,24 +137,6 @@ Additional information about the model can be found on the links below:
 - https://github.com/opensim-org/opensim-models
 
 
+Relevant papers: 
 
-
-
-## 4. Retargetting to RaBit
-
-<details>
-<summary>Rabit installation details </summary>
-1. Clone RaBit Library
-
-```
-    git clone https://github.com/zhongjinluo/RaBit.git
-    cd RaBit 
-```
-2. Download model data from [link](https://drive.google.com/file/d/1yvweTYPKtmuMt5Eu7CHZ4-Do4CRYLFtp/view?usp=sharing) to `<HOME_PATH>/RaBit`
-
-3. Unzip 
-```
-unzip rabit_data.zip
-```
-</details>
-
+https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1011462
