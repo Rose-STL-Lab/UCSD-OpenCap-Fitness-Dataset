@@ -211,7 +211,7 @@ class Visualizer:
 		joint_mapping_edges = np.array([(i,joint_mapping.shape[0]//2+i) for i in range(joint_mapping.shape[0]//2)])
 		ps_joint_mapping = ps.register_curve_network(f"Mapping (target- smpl) joints",joint_mapping,joint_mapping_edges,radius=0.001,color=np.array([0,1,0]))
 
-
+		ps_cams = []
 		# Set indivdual cameras 
 		for i,camera in enumerate(sample.rgb.cameras): 
 			intrinsics = ps.CameraIntrinsics(fov_vertical_deg=camera['fov_x'], fov_horizontal_deg=camera['fov_y'])
@@ -220,7 +220,7 @@ class Visualizer:
 			params = ps.CameraParameters(intrinsics, extrinsics)
 			ps_cam = ps.register_camera_view(f"Cam{i}", params)
 			print("Camera:",params.get_view_mat())
-
+			ps_cams.append(ps_cam)
 
 
 		if video_dir is None:

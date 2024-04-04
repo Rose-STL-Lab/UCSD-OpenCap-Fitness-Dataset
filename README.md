@@ -19,7 +19,7 @@
 - Create a single logger for all tasks. And seperate SummaryWriter for plotting metrics. Split get_logger function 
 - Add docs using MKLdocsString 
 - Create best visualization portal. 
-
+- Integrate MOT file from https://github.com/davidpagnon/Pose2Sim_Blender/
 
 ## Dataset 
 
