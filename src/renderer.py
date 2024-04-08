@@ -128,7 +128,7 @@ class Visualizer:
 		os.makedirs(os.path.join(video_dir,"images"),exist_ok=True)
 		os.makedirs(os.path.join(video_dir,"video"),exist_ok=True)
 
-		# ps.show()
+		ps.show()
 		print(f'Rendering images:')
 		for i in tqdm(range(verts.shape[0])):
 			ps_mesh.update_vertex_positions(verts[i])

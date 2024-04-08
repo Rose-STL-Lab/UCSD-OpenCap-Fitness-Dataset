@@ -1,10 +1,13 @@
 # Sports Analytics Dataset 
  
-
 [![](https://img.shields.io/badge/Project-Page-blue?style=flat&logo=Google%20chrome&logoColor=blue)](https://rose-stl-lab.github.io/UCSD-OpenCap-Fitness-Dataset/)
 [![](https://img.shields.io/badge/Paper-PDF-green?style=flat&logo=arXiv&logoColor=green)](https://www.overleaf.com/project/655aba246db8455baf77edd5)
 [![](https://img.shields.io/badge/Code-Github-red?style=flat&logo=github)](https://github.com/shubhMaheshwari/UCSD-Fitness-Dataset)
 [![](https://img.shields.io/badge/Dataset-Videos-pink)]()
+
+
+The repository contains information about the MCS dataset, which is used for sports analytics. It provides tools to convert motion capture data from .trc format to SMPL format. Additionally, it includes rendering capabilities using polyscope and data analysis functionalities.
+
 
 
 ```
@@ -24,7 +27,7 @@
 ## Dataset 
 
 To download the dataset use the following links: 
-1. [OpenCap Master]: https://docs.google.com/spreadsheets/d/1vkZ4-cdH2RjEOTZWhoYnSdXn8ruz9VFXZW7tg9fRYPE/edit?usp=sharing
+1. [OpenCap Master](https://docs.google.com/spreadsheets/d/1vkZ4-cdH2RjEOTZWhoYnSdXn8ruz9VFXZW7tg9fRYPE/edit?usp=sharing)
 2. [OpenCap]
 
 ### OpenCap File Structure
@@ -110,6 +113,12 @@ python3 src/retarget2smpl.py  -f --file <sample-filepath> # Specific trc file
 [Click to download extracted SMPL data from TRC file](https://ucsdcloud-my.sharepoint.com/:u:/g/personal/shmaheshwari_ucsd_edu/EQ41wb0to2pHsLFhXmdTT2sB4jutOKR37ZLo7m6zv_X3hw) 
 
 
+## 3. Dataset Aggregration 
+Store the retargeted smpl data into a single .pkl file for analysis and training.
+
+```
+python3 create_dataset.py 
+```
 
 ### 3. Data engineering 
 - Input representation 
