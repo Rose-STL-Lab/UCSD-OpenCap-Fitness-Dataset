@@ -24,7 +24,8 @@ INPUT_DIR = os.path.join(DATA_DIR,'OpenSim') # Path containing all the training 
 SMPL_DIR = os.path.join(DATA_DIR,'SMPL')
 RENDER_DIR = os.path.join(DATA_DIR,'rendered_videos')
 LOG_DIR = os.path.join(DATA_DIR,'logs')
-
+SEGMENT_DIR = os.path.join(DATA_DIR,'segments')
+SEGMENT_IMAGE_DIR = os.path.join(DATA_DIR,'segments_images')
 
 # ############################ DATASET CONSTANTS #######################################################
 # Excercise categories 

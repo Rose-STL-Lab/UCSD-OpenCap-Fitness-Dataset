@@ -191,7 +191,7 @@ class Visualizer:
 		Jtr_offset = Jtr_offset[:,sample.smpl.index['smpl_index']].cpu().data.numpy() + np.array([0.0,0,0])*self.ps_data['bbox']       
 		# Jtr_offset = Jtr_offset.cpu().data.numpy() + np.array([0,0,0])*self.ps_data['bbox']       
 
-		ps_mesh = ps.register_surface_mesh('mesh',verts[0],sample.smpl.smpl_layer.smpl_data['f'],transparency=0.5)
+		ps_mesh = ps.register_surface_mesh('mesh',verts[0],sample.smpl.smpl_layer.smpl_data['f'],transparency=0.7)
 		
 
 		target_bone_array = np.array([[i,p] for i,p in enumerate(sample.smpl.index['dataset_parent_array'])])
@@ -230,10 +230,22 @@ class Visualizer:
 		os.makedirs(os.path.join(video_dir,"images"),exist_ok=True)
 		os.makedirs(os.path.join(video_dir,"video"),exist_ok=True)
 
-		# ps.show()
+		ps.show()
+
+
+		# Create random colors of each segment
+		colors = np.random.random((sample.segments.shape[0],3))
+		mesh_colors = np.zeros((verts.shape[0],3))
+		for i,segment in enumerate(sample.segments):
+			mesh_colors[segment[0]:segment[1]] = colors[i:i+1]
+
+
 		print(f'Rendering images:')
 		for i in tqdm(range(verts.shape[0])):
+			
 			ps_mesh.update_vertex_positions(verts[i])
+			ps_mesh.set_color(mesh_colors[i])
+
 			ps_target_skeleton.update_node_positions(target_joints[i])
 			ps_smpl_skeleton.update_node_positions(Jtr[i])
 			ps_offset_skeleton.update_node_positions(Jtr_offset[i])
@@ -241,12 +253,15 @@ class Visualizer:
 
 			image_path = os.path.join(video_dir,"images",f"smpl_{i}.png")
 			# print(f"Saving plot to :{image_path}")	
-			ps.set_screenshot_extension(".png");
+			ps.set_screenshot_extension(".png")
 			ps.screenshot(image_path,transparent_bg=False)
 			
 			# if i > 0.6*verts.shape[0]:
 			# if i  % 100 == 99: 
 			# 	ps.show()
+
+		video_dir = RENDER_DIR
+		video_dir = os.path.join(video_dir,f"{sample.openCapID}_{sample.label}_{sample.recordAttempt}")
 
 		image_path = os.path.join(video_dir,"images",f"smpl_\%d.png")
 		video_path = os.path.join(video_dir,"video",f"{sample.label}_{sample.recordAttempt}_smpl.mp4")
@@ -268,8 +283,12 @@ def render_dataset():
 	vis = Visualizer()
 	
 	for subject in os.listdir(INPUT_DIR):
+		if '015b7571-9f0b-4db4-a854-68e57640640d' not in subject: 
+			continue
 		for sample_path in os.listdir(os.path.join(INPUT_DIR,subject,'MarkerData')):
 			# Input 
+			if "BAPF" in sample_path: 
+				continue
 			sample_path = os.path.join(INPUT_DIR,subject,'MarkerData',sample_path)
 			render_smpl(sample_path,vis,video_dir=video_dir)
 
@@ -304,11 +323,17 @@ def render_smpl(sample_path,vis,video_dir=None):
 	print(f"SubjectID:{sample.rgb.session_data['subjectID']} Action:{sample.label}")
 
 	# Visualize each view  
-	vis.render_smpl_multi_view(sample,video_dir=None)
+	# vis.render_smpl_multi_view(sample,video_dir=None)
+	
+
+	# Load Segments
+	if os.path.exists(os.path.join(SEGMENT_DIR,sample.name+'.npy')):
+		sample.segments = np.load(os.path.join(SEGMENT_DIR,sample.name+'.npy'))
+	else: 
+		return 
 	
 	
-	
-	# vis.render_smpl_multi_view(sample,video_dir=video_dir)
+	vis.render_smpl_multi_view(sample,video_dir=video_dir)
 
 	
 
