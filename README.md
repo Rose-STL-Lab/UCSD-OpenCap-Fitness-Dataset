@@ -1,10 +1,13 @@
 # Sports Analytics Dataset 
  
-
 [![](https://img.shields.io/badge/Project-Page-blue?style=flat&logo=Google%20chrome&logoColor=blue)](https://rose-stl-lab.github.io/UCSD-OpenCap-Fitness-Dataset/)
 [![](https://img.shields.io/badge/Paper-PDF-green?style=flat&logo=arXiv&logoColor=green)](https://www.overleaf.com/project/655aba246db8455baf77edd5)
 [![](https://img.shields.io/badge/Code-Github-red?style=flat&logo=github)](https://github.com/shubhMaheshwari/UCSD-Fitness-Dataset)
 [![](https://img.shields.io/badge/Dataset-Videos-pink)]()
+
+
+The repository contains information about the MCS dataset, which is used for sports analytics. It provides tools to convert motion capture data from .trc format to SMPL format. Additionally, it includes rendering capabilities using polyscope and data analysis functionalities.
+
 
 
 ```
@@ -12,7 +15,22 @@
 - Each activity is divided 5 classes 
 ```
 
-## OpenCap File Structure
+
+## Tasks
+- Remove SMPLLoader
+- Download videos using opencap batchDownload.ipynb: `https://github.com/stanfordnmbl/opencap-processing/blob/main/batchDownload.ipynb1`
+- Create a single logger for all tasks. And seperate SummaryWriter for plotting metrics. Split get_logger function 
+- Add docs using MKLdocsString 
+- Create best visualization portal. 
+- Integrate MOT file from https://github.com/davidpagnon/Pose2Sim_Blender/
+
+## Dataset 
+
+To download the dataset use the following links: 
+1. [OpenCap Master](https://docs.google.com/spreadsheets/d/1vkZ4-cdH2RjEOTZWhoYnSdXn8ruz9VFXZW7tg9fRYPE/edit?usp=sharing)
+2. [OpenCap]
+
+### OpenCap File Structure
 ```
 .
 ├── full_data
@@ -95,6 +113,12 @@ python3 src/retarget2smpl.py  -f --file <sample-filepath> # Specific trc file
 [Click to download extracted SMPL data from TRC file](https://ucsdcloud-my.sharepoint.com/:u:/g/personal/shmaheshwari_ucsd_edu/EQ41wb0to2pHsLFhXmdTT2sB4jutOKR37ZLo7m6zv_X3hw) 
 
 
+## 3. Dataset Aggregration 
+Store the retargeted smpl data into a single .pkl file for analysis and training.
+
+```
+python3 create_dataset.py 
+```
 
 ### 3. Data engineering 
 - Input representation 
@@ -122,24 +146,6 @@ Additional information about the model can be found on the links below:
 - https://github.com/opensim-org/opensim-models
 
 
+Relevant papers: 
 
-
-
-## 4. Retargetting to RaBit
-
-<details>
-<summary>Rabit installation details </summary>
-1. Clone RaBit Library
-
-```
-    git clone https://github.com/zhongjinluo/RaBit.git
-    cd RaBit 
-```
-2. Download model data from [link](https://drive.google.com/file/d/1yvweTYPKtmuMt5Eu7CHZ4-Do4CRYLFtp/view?usp=sharing) to `<HOME_PATH>/RaBit`
-
-3. Unzip 
-```
-unzip rabit_data.zip
-```
-</details>
-
+https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1011462
