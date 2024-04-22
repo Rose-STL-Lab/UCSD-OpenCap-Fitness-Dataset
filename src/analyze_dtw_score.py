@@ -14,8 +14,14 @@ for file in os.listdir(SEGMENT_DIR):
 	data = np.load(os.path.join(SEGMENT_DIR,file),allow_pickle=True).item()
 	# print(data)
 	
+	# print(data)
+
 	 
-	scores = list(data['score'][data['score'] != np.inf])
+	# scores = list(data['score'][data['score'] != np.inf])
+	if not np.isinf(data['score']):
+		scores = [data['score']]
+	else: 
+		continue
 
 	subject,label,iteration = file.split('.')[0].split('_')
 	

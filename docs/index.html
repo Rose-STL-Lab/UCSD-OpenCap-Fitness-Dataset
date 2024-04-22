@@ -279,6 +279,56 @@
 </section>
 
 
+<!-- Temporal Segmentation -->
+
+<section class="section hero ">
+  <div class="container is-max-desktop">
+
+    <div class="columns is-centered">
+      <!-- Animation. -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3 has-text-centered">Temporal Segmentation</h2>
+        <p>For the temporal segmentation, that is to find the start and the end frame for each exercise iteration, we found out that the angular velocity of the joints is a good indicator. 
+        </p>
+        <p>
+        The attached video shows an activity being performed. The color of the mesh changes for every iteraction. 
+        The top right plot shows the DTW metric similarity between different selected segments.   
+        The middle plot in the image shows the angular velocity for each joint ( in deg/s ) for each timestep. The red peaks in the bottom plot showcase the timestep at which an iteration ends.  
+        </p>
+
+      
+    </div>
+    <!--/ Matting. -->
+  </div>
+</section>
+
+
+<section class="hero is-small">
+  <div class="hero-body">
+    <div class="container is-max-desktop">
+      <div id="results-carousel" class="carousel results-carousel">
+
+        <div class="item item-quadrapeds">
+          <video poster="" id="CMJ_temporal" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/CMJ_2_smpl_temporal_segmentation.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+        <div class="item item-quadrapeds">
+          <video poster="" id="LLT_temporal" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/LLT_1_smpl_temporal_segmentation.mp4 "
+                    type="video/mp4">
+          </video>
+        </div>        
+
+
+      </div>
+    </div>
+  </div>
+</section>
+
+
 
 <section class="section hero is-light">
   <div class="container is-max-desktop">

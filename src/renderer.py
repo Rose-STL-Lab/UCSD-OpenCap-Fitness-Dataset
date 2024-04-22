@@ -176,7 +176,7 @@ class Visualizer:
 
 		ps.remove_all_structures()
 		# camera_position = np.array([0,0,3*self.ps_data['bbox'][0]])
-		camera_position = np.array([7*self.ps_data['bbox'][0],0.5*self.ps_data['bbox'][1],0]) + self.ps_data['object_position']
+		camera_position = np.array([5*self.ps_data['bbox'][0],0.5*self.ps_data['bbox'][1],0]) + self.ps_data['object_position']
 		look_at_position = np.array([0,0,0]) + self.ps_data['object_position']
 		ps.look_at(camera_position,look_at_position)
 
@@ -230,15 +230,17 @@ class Visualizer:
 		os.makedirs(os.path.join(video_dir,"images"),exist_ok=True)
 		os.makedirs(os.path.join(video_dir,"video"),exist_ok=True)
 
-		ps.show()
 
 
 		# Create random colors of each segment
 		colors = np.random.random((sample.segments.shape[0],3))
 		mesh_colors = np.zeros((verts.shape[0],3))
+		mesh_colors[:,1] = 0.3 # Default color is light blue
+		mesh_colors[:,2] = 1 # Default color is light blue
 		for i,segment in enumerate(sample.segments):
 			mesh_colors[segment[0]:segment[1]] = colors[i:i+1]
 
+		ps.show()	
 
 		print(f'Rendering images:')
 		for i in tqdm(range(verts.shape[0])):
@@ -259,9 +261,10 @@ class Visualizer:
 			# if i > 0.6*verts.shape[0]:
 			# if i  % 100 == 99: 
 			# 	ps.show()
+			# if i in list(sample.segments.reshape(-1)):
+			# 	print(i) 
+			# 	ps.show()
 
-		video_dir = RENDER_DIR
-		video_dir = os.path.join(video_dir,f"{sample.openCapID}_{sample.label}_{sample.recordAttempt}")
 
 		image_path = os.path.join(video_dir,"images",f"smpl_\%d.png")
 		video_path = os.path.join(video_dir,"video",f"{sample.label}_{sample.recordAttempt}_smpl.mp4")
@@ -278,7 +281,7 @@ class Visualizer:
 
 # Load file and render skeleton for each video
 def render_dataset():
-	video_dir = 'rendered_videos'
+	video_dir = RENDER_DIR
 	
 	vis = Visualizer()
 	
@@ -328,14 +331,15 @@ def render_smpl(sample_path,vis,video_dir=None):
 
 	# Load Segments
 	if os.path.exists(os.path.join(SEGMENT_DIR,sample.name+'.npy')):
-		sample.segments = np.load(os.path.join(SEGMENT_DIR,sample.name+'.npy'))
+		sample.segments = np.load(os.path.join(SEGMENT_DIR,sample.name+'.npy'),allow_pickle=True).item()['segments']
 	else: 
 		return 
 	
-	
+	if video_dir is not None:
+		video_dir = os.path.join(video_dir,f"{sample.openCapID}_{sample.label}_{sample.recordAttempt}")
 	vis.render_smpl_multi_view(sample,video_dir=video_dir)
 
-	
+
 
 
 
