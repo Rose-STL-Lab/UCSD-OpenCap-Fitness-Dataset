@@ -26,7 +26,7 @@ RENDER_DIR = os.path.join(DATA_DIR,'rendered_videos')
 LOG_DIR = os.path.join(DATA_DIR,'logs')
 SEGMENT_DIR = os.path.join(DATA_DIR,'segments')
 SEGMENT_IMAGE_DIR = os.path.join(DATA_DIR,'segments_images')
-
+PKL_DIR = os.path.join(DATA_DIR,'pkl')
 # ############################ DATASET CONSTANTS #######################################################
 # Excercise categories 
 LABELS = ['LSLS', 'CMJ', 'PU', 'SQT', 'RSLS', 'BAPF', 'LLTF', 'LLT', 'RCMJ', 'PUF', 'BAP', 'RLTF', 'RLT', 'LCMJ'] 
