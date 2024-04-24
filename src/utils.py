@@ -19,7 +19,7 @@ sys.path.extend([HOME_DIR,RABIT_DIR,STYLEGAN_DIR])
 
 # ############################ FOLDER PATHS #######################################################
 # Files
-DATA_DIR = os.path.join(HOME_DIR,'data')
+DATA_DIR = os.path.join(HOME_DIR,'MCS_DATA')
 INPUT_DIR = os.path.join(DATA_DIR,'OpenSim') # Path containing all the training data (currently using xyz)
 SMPL_DIR = os.path.join(DATA_DIR,'SMPL')
 RENDER_DIR = os.path.join(DATA_DIR,'rendered_videos')

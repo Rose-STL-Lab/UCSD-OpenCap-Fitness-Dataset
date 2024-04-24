@@ -23,7 +23,9 @@ The repository contains information about the MCS dataset, which is used for spo
 - Add docs using MKLdocsString 
 - Create best visualization portal. 
 - Integrate MOT file from https://github.com/davidpagnon/Pose2Sim_Blender/
-
+- Change convert (raises error when os.system is called. )
+- Main installation script to install convert and other libraries
+- Change delimiter for OpenCAP loader. make it compatible for linux and windows.
 ## Dataset 
 
 To download the dataset use the following links: 
