@@ -9,13 +9,13 @@ import platform
 
 ########################## GET SYSTEM Information ##########################
 
-SYSTEM_OS = platform.version
+SYSTEM_OS = platform.system()
 
 
 
 ########################## SET RANDOM SEEDS #################################
 np.random.seed(2)
-torch.seed(5)
+torch.manual_seed(5)
 
 ############################# LIBRARY IMPORTS ####################################################
 assert __file__[-1] != '/' , f'File:{__init__}, cannot be parsed' 

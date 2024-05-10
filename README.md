@@ -151,7 +151,20 @@ python src/temporal_segmentation.py
 ## 3. Dataset Aggregration 
 Store the retargeted smpl data into a single .pkl file for analysis and training.
 
+HumanML3D format (263 dim representation) is as follows:
+root_rot_velocity (B, seq_len, 1)
+root_linear_velocity (B, seq_len,2)
+root_y (B, seq_len, 1)
+ric_data (B, seq_len, (joint_num - 1)*3)
+rot_data (B, seq_len, (joint_num - 1)6)
+local_velocity (B, seq_len,joint_num3)
+foot contact (B, seq_len, 4)
 
+And the SMPL joint indexing for 22 joints is as below
+
+['pelvis', 'left_hip', 'right_hip', 'spine1', 'left_knee', 'right_knee', 'spine2', 'left_ankle', 'right_ankle', 'spine3', 'left_foot', 'right_foot', 'neck', 'left_collar', 'right_collar', 'head', 'left_shoulder', 'right_shoulder', 'left_elbow', 'right_elbow', 'left_wrist', 'right_wrist']
+
+The data from pkl file is converted into 263 HumanML3D format for training purposes.
 
 ### 3. Data engineering 
 - Input representation 
