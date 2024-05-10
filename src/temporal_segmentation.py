@@ -432,7 +432,7 @@ def find_best_3_segments(max_pose_velocity,valleys,fig_path=None,visualize=False
         
     return segments,dtw_score
 
-
+err_files = []
 def find_segments(mcs_smpl_path,framerate=60,visualize=False):
     """
         Find segments in the angular velocity of a time series of rotation vectors.
@@ -555,13 +555,42 @@ def find_segments(mcs_smpl_path,framerate=60,visualize=False):
     fig.update_layout(width=1600, height=800)
     fig.write_image(image_path + "_angular.png")
 
+    if SYSTEM_OS == 'Linux':
+        print(f"Runnig command: convert +append {image_path + '_angular.png'} {image_path + '_dtw.png'} {image_path + '.png'}")
+        os.system(f"convert +append {image_path + '_angular.png'} {image_path + '_dtw.png'} {image_path + '.png'}")
+        os.system(f"rm {image_path + '_angular.png'} {image_path + '_dtw.png'}")
+    elif SYSTEM_OS == 'Windows': 
+        import subprocess
 
-    print(f"Runnig command: convert +append {image_path + '_angular.png'} {image_path + '_dtw.png'} {image_path + '.png'}")
-    os.system(f"convert +append {image_path + '_angular.png'} {image_path + '_dtw.png'} {image_path + '.png'}")
-    os.system(f"rm {image_path + '_angular.png'} {image_path + '_dtw.png'}")
+        # Define the file paths
+        angular_png = file_path.replace('.npy', '_angular.png')
+        dtw_png = file_path.replace('.npy', '_dtw.png')
+        output_png = file_path.replace('.npy', '.png')
 
+        # Construct the command
+        # command = f"& \"C:\\Program Files\\ImageMagick-7.1.1-Q16-HDRI\\convert.exe\" +append \"{angular_png}\" \"{dtw_png}\" \"{output_png}\""
+        command = [
+            "C:\\Program Files\\ImageMagick-7.1.1-Q16-HDRI\\convert.exe",
+            "+append",
+            angular_png,
+            dtw_png,
+            output_png
+            ]
+        try:
+            # Run the command
+            subprocess.run(command, shell=True, check=True)
+            # Remove the temporary files
+            subprocess.run(f"del \"{angular_png}\" \"{dtw_png}\"", shell=True, check=True)
 
+            # Print the command being executed
+            print(f"Running command: {command}")
+        except subprocess.CalledProcessError as e:
+            # Print the error message
+            print(f"Error: {e}")
+            err_files.append(file_path)
 
+        else: 
+            raise OSError(f"Unable to use convert function to create visualization plots. Implemented for Linux and Windows. Not for {SYSTEM_OS}")        
 
 
 if __name__ == "__main__": 
@@ -581,4 +610,9 @@ if __name__ == "__main__":
                 # continue 
 
             mcs_smpl_path = os.path.join(SMPL_DIR,smpl_file) 
-            segments = find_segments(mcs_smpl_path,framerate=framerate,visualize=True)
+            segments = find_segments(mcs_smpl_path,framerate=framerate,visualize=False)
+
+
+            # time.sleep(5)
+    
+    print(err_files)

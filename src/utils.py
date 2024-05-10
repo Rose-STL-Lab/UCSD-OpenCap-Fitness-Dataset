@@ -3,9 +3,19 @@ import sys
 import argparse
 import logging
 import numpy as np
+import torch
+import platform
+
+
+########################## GET SYSTEM Information ##########################
+
+SYSTEM_OS = platform.version
+
+
 
 ########################## SET RANDOM SEEDS #################################
 np.random.seed(2)
+torch.seed(5)
 
 ############################# LIBRARY IMPORTS ####################################################
 assert __file__[-1] != '/' , f'File:{__init__}, cannot be parsed' 
@@ -19,13 +29,13 @@ sys.path.extend([HOME_DIR,RABIT_DIR,STYLEGAN_DIR])
 
 # ############################ FOLDER PATHS #######################################################
 # Files
-DATA_DIR = os.path.join(HOME_DIR,'data')
+DATA_DIR = os.path.join(HOME_DIR,'MCS_DATA')
 INPUT_DIR = os.path.join(DATA_DIR,'OpenSim') # Path containing all the training data (currently using xyz)
 SMPL_DIR = os.path.join(DATA_DIR,'SMPL')
 RENDER_DIR = os.path.join(DATA_DIR,'rendered_videos')
 LOG_DIR = os.path.join(DATA_DIR,'logs')
 SEGMENT_DIR = os.path.join(DATA_DIR,'segments')
-
+PKL_DIR = os.path.join(DATA_DIR,'pkl')
 # ############################ DATASET CONSTANTS #######################################################
 # Excercise categories 
 LABELS = ['LSLS', 'CMJ', 'PU', 'SQT', 'RSLS', 'BAPF', 'LLTF', 'LLT', 'RCMJ', 'PUF', 'BAP', 'RLTF', 'RLT', 'LCMJ'] 

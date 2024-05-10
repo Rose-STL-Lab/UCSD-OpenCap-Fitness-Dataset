@@ -23,7 +23,9 @@ The repository contains information about the MCS dataset, which is used for spo
 - Add docs using MKLdocsString 
 - Create best visualization portal. 
 - Integrate MOT file from https://github.com/davidpagnon/Pose2Sim_Blender/
-
+- Change convert (raises error when os.system is called. )
+- Main installation script to install convert and other libraries
+- Change delimiter for OpenCAP loader. make it compatible for linux and windows.
 ## Dataset 
 
 To download the dataset use the following links: 
@@ -113,12 +115,43 @@ python3 src/retarget2smpl.py  -f --file <sample-filepath> # Specific trc file
 [Click to download extracted SMPL data from TRC file](https://ucsdcloud-my.sharepoint.com/:u:/g/personal/shmaheshwari_ucsd_edu/EQ41wb0to2pHsLFhXmdTT2sB4jutOKR37ZLo7m6zv_X3hw) 
 
 
+## 3. Temporal Segmentation 
+
+### Installation
+```
+pip install 
+```
+
+- Raise an issue if you are having trouble installing any of the above packages
+
+
+<details>
+<summary>Convert Installation details </summary>
+- Linux
+
+```
+sudo apt install imagemagick
+
+```
+</details>
+
+
+<details>
+<summary>OpenSim installation details </summary>
+ Step:1 - https://github.com/opensim-org/opensim-core/wiki/Build-Instructions#configuration-1
+ Step 2 - https://simtk-confluence.stanford.edu:8443/display/OpenSim/Scripting+in+Python
+</details>
+
+
+```
+python src/temporal_segmentation.py 
+```
+
+
 ## 3. Dataset Aggregration 
 Store the retargeted smpl data into a single .pkl file for analysis and training.
 
-```
-python3 create_dataset.py 
-```
+
 
 ### 3. Data engineering 
 - Input representation 
@@ -127,6 +160,7 @@ python3 create_dataset.py
 ## Data analysis
 - Mocap Capture 
     - [Click to download multi-view RGB Videos and .mot](https://ucsdcloud-my.sharepoint.com/:f:/g/personal/zweatherford_ucsd_edu/EuHlQ1oahHBGgRTADJoImk8BclFRfX5VLFcI0_CbKiZ9Tg?e=q4lBjq)  
+
 
 
 #### TODO: Per sample pose reconstruction using PCA 

@@ -318,6 +318,7 @@ def render_smpl(sample_path,vis,video_dir=None):
 
 	# Load SMPL
 	sample.smpl = SMPLRetarget(sample.joints_np.shape[0],device=None)	
+	print(sample.name)
 	sample.smpl.load(os.path.join(SMPL_DIR,sample.name+'.pkl'))
 
 	# Visualize SMPL
