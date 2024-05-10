@@ -5,13 +5,10 @@ import numpy as np
 
 from scipy.signal import find_peaks
 from scipy.spatial.transform import Rotation as R
-from utils import smpl_joints,cuda,SMPL_DIR,SEGMENT_DIR,SEGMENT_IMAGE_DIR
+from utils import smpl_joints,cuda,SMPL_DIR,RENDER_DIR,SEGMENT_DIR
 
 import plotly.subplots
 import plotly.graph_objects as go
-
-
-
 
 # TODO not working (unable to load utils from model of digital coach)
 def assert_retarget_valid_smpl_format(data): 
@@ -469,15 +466,17 @@ def find_segments(mcs_smpl_path,framerate=60,visualize=False):
 
     # segments = get_segment_from_change_points(change_points,len(max_pose_velocity),framerate=framerate)
 
-    file_name = os.path.basename(mcs_smpl_path).split(".")[0] + '.npy'
+    file_name = os.path.basename(mcs_smpl_path).split(".")[0]
     os.makedirs(SEGMENT_DIR, exist_ok=True)
-    os.makedirs(SEGMENT_IMAGE_DIR, exist_ok=True)
-    file_path = os.path.join(SEGMENT_IMAGE_DIR,file_name)
+    
+    # Make sure image dir exists
+    os.makedirs(os.path.join(RENDER_DIR,file_name,"images"), exist_ok=True)
+    image_path = os.path.join(os.path.join(RENDER_DIR,file_name,"images"),file_name)
 
 
     # selected_segments,segment_score = validate_segments(max_pose_velocity,segments,fig_path=file_path.replace(".npy","_dtw.png"),visualize=visualize)
-    segments, segment_score = find_best_3_segments(max_pose_velocity,change_points,fig_path=file_path.replace(".npy","_dtw.png"),visualize=visualize)
-    print(f"File:{mcs_smpl_path} Segments: {segments} DTW Score:{segment_score}")
+    segments, segment_score = find_best_3_segments(max_pose_velocity,change_points,fig_path=image_path + "_dtw.png",visualize=visualize)
+    print(f"Sample:{mcs_smpl_path} image_path:{image_path}  save_path:{file_name} Segments: {segments} DTW Score:{segment_score}")
 
 
     # segments = segments[selected_segments]
@@ -485,7 +484,7 @@ def find_segments(mcs_smpl_path,framerate=60,visualize=False):
     if len(segments) != 3:
         print("Found invalid number of segments")
     # Save segments into npy file
-    np.save(os.path.join(SEGMENT_DIR,file_name), {'segments':segments,'score':segment_score})
+    np.save(os.path.join(SEGMENT_DIR,file_name + '.npy'), {'segments':segments,'score':segment_score})
 
     # Create subplots
     fig = plotly.subplots.make_subplots(rows=2, cols=1, subplot_titles=("(a) Joint Angular Velocity", "(b) Maximal Joint Angular Velocity"))
@@ -554,43 +553,44 @@ def find_segments(mcs_smpl_path,framerate=60,visualize=False):
         fig.show()
 
     fig.update_layout(width=1600, height=800)
-    fig.write_image(file_path.replace(".npy","_angular.png"))
+    fig.write_image(image_path + "_angular.png")
 
+    if SYSTEM_OS == 'Linux':
+        print(f"Runnig command: convert +append {image_path + '_angular.png'} {image_path + '_dtw.png'} {image_path + '.png'}")
+        os.system(f"convert +append {image_path + '_angular.png'} {image_path + '_dtw.png'} {image_path + '.png'}")
+        os.system(f"rm {image_path + '_angular.png'} {image_path + '_dtw.png'}")
+    elif SYSTEM_OS == 'Windows': 
+        import subprocess
 
-    # os.system(f"convert +append {file_path.replace('.npy','_angular.png')} {file_path.replace('.npy','_dtw.png')} {file_path.replace('.npy','.png')}")
-    # os.system(f"rm {file_path.replace('.npy','_angular.png')} {file_path.replace('.npy','_dtw.png')}")
-    # print(f"Runnig command: convert +append {file_path.replace('.npy','_angular.png')} {file_path.replace('.npy','_dtw.png')} {file_path.replace('.npy','.png')}")
-    import subprocess
+        # Define the file paths
+        angular_png = file_path.replace('.npy', '_angular.png')
+        dtw_png = file_path.replace('.npy', '_dtw.png')
+        output_png = file_path.replace('.npy', '.png')
 
-    # Define the file paths
-    angular_png = file_path.replace('.npy', '_angular.png')
-    dtw_png = file_path.replace('.npy', '_dtw.png')
-    output_png = file_path.replace('.npy', '.png')
+        # Construct the command
+        # command = f"& \"C:\\Program Files\\ImageMagick-7.1.1-Q16-HDRI\\convert.exe\" +append \"{angular_png}\" \"{dtw_png}\" \"{output_png}\""
+        command = [
+            "C:\\Program Files\\ImageMagick-7.1.1-Q16-HDRI\\convert.exe",
+            "+append",
+            angular_png,
+            dtw_png,
+            output_png
+            ]
+        try:
+            # Run the command
+            subprocess.run(command, shell=True, check=True)
+            # Remove the temporary files
+            subprocess.run(f"del \"{angular_png}\" \"{dtw_png}\"", shell=True, check=True)
 
-    # Construct the command
-    # command = f"& \"C:\\Program Files\\ImageMagick-7.1.1-Q16-HDRI\\convert.exe\" +append \"{angular_png}\" \"{dtw_png}\" \"{output_png}\""
-    command = [
-        "C:\\Program Files\\ImageMagick-7.1.1-Q16-HDRI\\convert.exe",
-        "+append",
-        angular_png,
-        dtw_png,
-        output_png
-        ]
-    try:
-        # Run the command
-        subprocess.run(command, shell=True, check=True)
+            # Print the command being executed
+            print(f"Running command: {command}")
+        except subprocess.CalledProcessError as e:
+            # Print the error message
+            print(f"Error: {e}")
+            err_files.append(file_path)
 
-        # Remove the temporary files
-        subprocess.run(f"del \"{angular_png}\" \"{dtw_png}\"", shell=True, check=True)
-
-        # Print the command being executed
-        print(f"Running command: {command}")
-    except subprocess.CalledProcessError as e:
-        # Print the error message
-        print(f"Error: {e}")
-        err_files.append(file_path)
-
-
+        else: 
+            raise OSError(f"Unable to use convert function to create visualization plots. Implemented for Linux and Windows. Not for {SYSTEM_OS}")        
 
 
 if __name__ == "__main__": 
@@ -600,15 +600,14 @@ if __name__ == "__main__":
         mcs_smpl_path = sys.argv[1] 
         segments = find_segments(mcs_smpl_path,framerate=framerate,visualize=True)
     else: 
-        import time 
         for smpl_file in os.listdir(SMPL_DIR): 
             # if "BAP" not in smpl_file: 
                 # continue
             # if "BAPF" in smpl_file: 
                 # continue
-            file_name = os.path.basename(smpl_file).split(".")[0] + '.npy'
-            if os.path.isfile(os.path.join(SEGMENT_DIR,file_name)): 
-                continue 
+            # file_name = os.path.basename(smpl_file).split(".")[0] + '.npy'
+            # if os.path.isfile(os.path.join(SEGMENT_DIR,file_name)): 
+                # continue 
 
             mcs_smpl_path = os.path.join(SMPL_DIR,smpl_file) 
             segments = find_segments(mcs_smpl_path,framerate=framerate,visualize=False)

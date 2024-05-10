@@ -286,12 +286,7 @@ def render_dataset():
 	vis = Visualizer()
 	
 	for subject in os.listdir(INPUT_DIR):
-		if '015b7571-9f0b-4db4-a854-68e57640640d' not in subject: 
-			continue
 		for sample_path in os.listdir(os.path.join(INPUT_DIR,subject,'MarkerData')):
-			# Input 
-			if "BAPF" in sample_path: 
-				continue
 			sample_path = os.path.join(INPUT_DIR,subject,'MarkerData',sample_path)
 			render_smpl(sample_path,vis,video_dir=video_dir)
 
@@ -308,6 +303,15 @@ def render_smpl(sample_path,vis,video_dir=None):
 	"""
 	sample = OpenCapDataLoader(sample_path)
 	
+
+	if video_dir is not None:
+		video_dir = os.path.join(video_dir,f"{sample.openCapID}_{sample.label}_{sample.recordAttempt}")
+		if os.path.isfile(os.path.join(video_dir,f"{sample.label}_{sample.recordAttempt}_smpl.mp4")): 
+			return  
+
+
+
+
 	# Visualize Target skeleton
 	# vis.render_skeleton(sample,video_dir=video_dir)
 
@@ -336,8 +340,7 @@ def render_smpl(sample_path,vis,video_dir=None):
 	else: 
 		return 
 	
-	if video_dir is not None:
-		video_dir = os.path.join(video_dir,f"{sample.openCapID}_{sample.label}_{sample.recordAttempt}")
+
 	vis.render_smpl_multi_view(sample,video_dir=video_dir)
 
 

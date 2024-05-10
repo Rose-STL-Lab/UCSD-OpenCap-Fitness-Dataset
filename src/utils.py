@@ -3,9 +3,19 @@ import sys
 import argparse
 import logging
 import numpy as np
+import torch
+import platform
+
+
+########################## GET SYSTEM Information ##########################
+
+SYSTEM_OS = platform.version
+
+
 
 ########################## SET RANDOM SEEDS #################################
 np.random.seed(2)
+torch.seed(5)
 
 ############################# LIBRARY IMPORTS ####################################################
 assert __file__[-1] != '/' , f'File:{__init__}, cannot be parsed' 
@@ -25,7 +35,6 @@ SMPL_DIR = os.path.join(DATA_DIR,'SMPL')
 RENDER_DIR = os.path.join(DATA_DIR,'rendered_videos')
 LOG_DIR = os.path.join(DATA_DIR,'logs')
 SEGMENT_DIR = os.path.join(DATA_DIR,'segments')
-SEGMENT_IMAGE_DIR = os.path.join(DATA_DIR,'segments_images')
 PKL_DIR = os.path.join(DATA_DIR,'pkl')
 # ############################ DATASET CONSTANTS #######################################################
 # Excercise categories 

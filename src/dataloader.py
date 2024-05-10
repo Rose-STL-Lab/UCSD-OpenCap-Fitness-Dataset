@@ -82,7 +82,12 @@ class OpenCapDataLoader:
 
 		print(sample_path)
 		# File name details  
-		openCapID = next(filter(lambda x: "OpenCapData" in x,sample_path.split('\\')))
+		if SYSTEM_OS == 'Linux':
+			openCapID = next(filter(lambda x: "OpenCapData" in x,sample_path.split('/')))
+		elif SYSTEM_OS == 'Windows': 
+			openCapID = next(filter(lambda x: "OpenCapData" in x,sample_path.split('\\')))
+		else: 
+			raise OSError(f"Unable to split .trc file to find OpenCapID. Implemented for Linux and Windows. Not for {SYSTEM_OS}")
 		openCapID = openCapID.split('_')[-1]
 
 		label,recordAttempt = OpenCapDataLoader.get_label(os.path.basename(sample_path))
