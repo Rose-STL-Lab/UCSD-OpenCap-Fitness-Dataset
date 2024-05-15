@@ -34,12 +34,15 @@ elif os.path.isdir(os.path.join(HOME_DIR,'data')):
     DATA_DIR = os.path.join(HOME_DIR,'data')
 else: 
     raise FileNotFoundError("Unable to find directory containing the MCS dataset")
+
 INPUT_DIR = os.path.join(DATA_DIR,'OpenSim') # Path containing all the training data (currently using xyz)
 SMPL_DIR = os.path.join(DATA_DIR,'SMPL')
 RENDER_DIR = os.path.join(DATA_DIR,'rendered_videos')
 LOG_DIR = os.path.join(DATA_DIR,'logs')
 SEGMENT_DIR = os.path.join(DATA_DIR,'segments')
 PKL_DIR = os.path.join(DATA_DIR,'pkl')
+HUMANML_DIR = os.path.join(DATA_DIR,'humanml3d')
+
 # ############################ DATASET CONSTANTS #######################################################
 # Excercise categories 
 LABELS = ['LSLS', 'CMJ', 'PU', 'SQT', 'RSLS', 'BAPF', 'LLTF', 'LLT', 'RCMJ', 'PUF', 'BAP', 'RLTF', 'RLT', 'LCMJ'] 
