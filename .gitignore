@@ -1,3 +1,7 @@
+# DATA DIR
+data
+MCS_DATA
+
 # VS-Code
 .vscode
 
@@ -12,6 +16,7 @@ src/log.txt
 src/imgui.ini 
 src/.polyscope.ini
 
+# Dataset + Output files
 OpenCap/
 OpenSim/
 SMPL/

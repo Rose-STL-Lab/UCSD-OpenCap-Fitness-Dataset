@@ -136,11 +136,7 @@ sudo apt install imagemagick
 </details>
 
 
-<details>
-<summary>OpenSim installation details </summary>
- Step:1 - https://github.com/opensim-org/opensim-core/wiki/Build-Instructions#configuration-1
- Step 2 - https://simtk-confluence.stanford.edu:8443/display/OpenSim/Scripting+in+Python
-</details>
+
 
 
 ```
@@ -150,29 +146,36 @@ python src/temporal_segmentation.py
 
 ## 3. Dataset Aggregration 
 Store the retargeted smpl data into a single .pkl file for analysis and training.
+```
+    python src/generate_data_pkl.py
+```
 
-HumanML3D format (263 dim representation) is as follows:
-root_rot_velocity (B, seq_len, 1)
-root_linear_velocity (B, seq_len,2)
-root_y (B, seq_len, 1)
-ric_data (B, seq_len, (joint_num - 1)*3)
-rot_data (B, seq_len, (joint_num - 1)6)
-local_velocity (B, seq_len,joint_num3)
-foot contact (B, seq_len, 4)
+## 4. HumanML3D format (263 dim representation) is as follows:
 
-And the SMPL joint indexing for 22 joints is as below
+The data from pkl file is converted into 263 HumanML3D format for generation and classifier purposes. 
+```
+    python src/HumanML3D/rots_to_smpl.py
+```
 
-['pelvis', 'left_hip', 'right_hip', 'spine1', 'left_knee', 'right_knee', 'spine2', 'left_ankle', 'right_ankle', 'spine3', 'left_foot', 'right_foot', 'neck', 'left_collar', 'right_collar', 'head', 'left_shoulder', 'right_shoulder', 'left_elbow', 'right_elbow', 'left_wrist', 'right_wrist']
+Each sample consists of
+- root_rot_velocity $ \in R^{seq\_len \times 1}$
+- root_linear_velocity $\in R^{seq\_len \times 2}$
+- root_y $\in R^{seq\_len \times 1}$
+- ric_data $ \in R^{seq\_len \times 3(joint\_num - 1)}$
+- rot_data $\in R^{seq\_len \times 6(joint\_num - 1)} $
+- local_velocity $\in R^{seq\_len \times 3joint\_num} $
+- foot contact $\in R^{seq\_len \times 4} $
 
-The data from pkl file is converted into 263 HumanML3D format for training purposes.
+Here: 1 + 2 + 1 + 21\*3 + 21\*6 + 22\*3 + 4 = 263  
+$seq\_len$ is the number of frame
 
-### 3. Data engineering 
-- Input representation 
+$joint\_num=22$ is the number of joints used my HumanML3D SMPL representation. The last 2 joints (left and right hand) are discarded.    
 
 
 ## Data analysis
 - Mocap Capture 
     - [Click to download multi-view RGB Videos and .mot](https://ucsdcloud-my.sharepoint.com/:f:/g/personal/zweatherford_ucsd_edu/EuHlQ1oahHBGgRTADJoImk8BclFRfX5VLFcI0_CbKiZ9Tg?e=q4lBjq)  
+
 
 
 
@@ -192,6 +195,11 @@ Additional information about the model can be found on the links below:
 - https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5989715/
 - https://github.com/opensim-org/opensim-models
 
+<details>
+<summary>OpenSim installation details </summary>
+ Step:1 - https://github.com/opensim-org/opensim-core/wiki/Build-Instructions#configuration-1
+ Step 2 - https://simtk-confluence.stanford.edu:8443/display/OpenSim/Scripting+in+Python
+</details>
 
 Relevant papers: 
 
