@@ -5,18 +5,14 @@
 [![](https://img.shields.io/badge/Code-Github-red?style=flat&logo=github)](https://github.com/shubhMaheshwari/UCSD-Fitness-Dataset)
 [![](https://img.shields.io/badge/Dataset-Videos-pink)]()
 
+![](https://img.shields.io/badge/Windows-0078D6?style=flat&logo=windows&logoColor=white)
+![](https://img.shields.io/badge/Ubuntu20.04-E95420?style=flat&logo=ubuntu&logoColor=white)
 
-The repository contains information about the MCS dataset, which is used for sports analytics. It provides tools to convert motion capture data from .trc format to SMPL format. Additionally, it includes rendering capabilities using polyscope and data analysis functionalities.
-
-
-
-```
-- Interpolate between MCS scores 
-- Each activity is divided 5 classes 
-```
+The repository contains information about the MCS dataset, which is used for sports analytics. It provides tools to convert motion capture data from .trc format to SMPL format. Additionally, it includes rendering capabilities and  analysis functionalities.
 
 
 ## Tasks
+
 - Remove SMPLLoader
 - Download videos using opencap batchDownload.ipynb: `https://github.com/stanfordnmbl/opencap-processing/blob/main/batchDownload.ipynb1`
 - Create a single logger for all tasks. And seperate SummaryWriter for plotting metrics. Split get_logger function 
@@ -26,11 +22,23 @@ The repository contains information about the MCS dataset, which is used for spo
 - Change convert (raises error when os.system is called. )
 - Main installation script to install convert and other libraries
 - Change delimiter for OpenCAP loader. make it compatible for linux and windows.
-## Dataset 
+
+
+## Dataset Download links
 
 To download the dataset use the following links: 
 1. [OpenCap Master](https://docs.google.com/spreadsheets/d/1vkZ4-cdH2RjEOTZWhoYnSdXn8ruz9VFXZW7tg9fRYPE/edit?usp=sharing)
-2. [OpenCap]
+2. [OpenCap] 
+3. [PPE Squat](https://ucsdcloud-my.sharepoint.com/:f:/g/personal/zweatherford_ucsd_edu/EuHlQ1oahHBGgRTADJoImk8BclFRfX5VLFcI0_CbKiZ9Tg?e=q4lBjq)  
+
+
+## Steps to re-create the dataset
+```
+python3 src/retarget2smpl.py -f 
+python3 src/temporal_segmentation.py
+python3 src/generate_data_pkl.py
+```
+
 
 ### OpenCap File Structure
 ```
@@ -56,6 +64,33 @@ To download the dataset use the following links:
 ```
 **Opencap processing**:  [Library to process files](https://github.com/stanfordnmbl/opencap-processing )
 
+## Code Structure
+```
+src
+├── analyze_dtw_score.py // Script for analyzing Dynamic Time Warping (DTW) scores
+├── dataloader.py // Contains code for loading and preprocessing data
+├── evaluation
+│   └── foot_sliding_checker.py // Script for checking foot sliding in animations
+├── generate_data_pkl.py // Script for generating pickle files from data
+├── HumanML3D // Convert dataset to HumanML3D Format
+│   ├── rots_to_smpl.py // Script for converting rotations to SMPL format
+├── meters.py // Contains code for measuring and logging training progress
+├── pose_reconstruction.py // Contains code for reconstructing poses from data
+├── renderer.py // Contains code for rendering makerker data(.trc), smpl mesh and skeleton, camera location
+├── retarget2smpl.py // Script for retargeting .trc to the SMPL model
+├── smpl_loader.py // Contains code for loading SMPL models
+├── temporal_segmentation.py // Detects start stop cycle for each sample
+├── tests.py // Contains unit tests for the project
+└── utils.py // Contains constants and logging functions used across the project
+```
+
+Note:- Each python file can be called from any directory. 
+```
+// All commands should be work
+python retarget2smpl.py 
+python src/retarget2smpl.py
+python UCSD-OpenCap-Fitness-Dataset/src/retarget2smpl.py  
+```
 
 ## 1. Visualization 
 
@@ -144,37 +179,37 @@ python src/temporal_segmentation.py
 ```
 
 
-## 3. Dataset Aggregration 
-Store the retargeted smpl data into a single .pkl file for analysis and training.
-```
-    python src/generate_data_pkl.py
-```
+## 3. Dataset Aggregration  
+### MDM Format
+    Store the retargeted smpl data into a single .pkl file for analysis and training.
+    ```
+        python src/generate_data_pkl.py
+    ```
 
-## 4. HumanML3D format (263 dim representation) is as follows:
+### HumanML3D format (263 dim representation):
 
-The data from pkl file is converted into 263 HumanML3D format for generation and classifier purposes. 
-```
-    python src/HumanML3D/rots_to_smpl.py
-```
+    The data from pkl file is converted into 263 HumanML3D format for generation and classifier purposes. 
+    ```
+        python src/HumanML3D/rots_to_smpl.py
+    ```
 
-Each sample consists of
-- root_rot_velocity $ \in R^{seq\_len \times 1}$
-- root_linear_velocity $\in R^{seq\_len \times 2}$
-- root_y $\in R^{seq\_len \times 1}$
-- ric_data $ \in R^{seq\_len \times 3(joint\_num - 1)}$
-- rot_data $\in R^{seq\_len \times 6(joint\_num - 1)} $
-- local_velocity $\in R^{seq\_len \times 3joint\_num} $
-- foot contact $\in R^{seq\_len \times 4} $
+    Each sample consists of
+    - root_rot_velocity $ \in R^{seq\_len \times 1}$
+    - root_linear_velocity $\in R^{seq\_len \times 2}$
+    - root_y $\in R^{seq\_len \times 1}$
+    - ric_data $ \in R^{seq\_len \times 3(joint\_num - 1)}$
+    - rot_data $\in R^{seq\_len \times 6(joint\_num - 1)} $
+    - local_velocity $\in R^{seq\_len \times 3joint\_num} $
+    - foot contact $\in R^{seq\_len \times 4} $
 
-Here: 1 + 2 + 1 + 21\*3 + 21\*6 + 22\*3 + 4 = 263  
-$seq\_len$ is the number of frame
+    Here: 1 + 2 + 1 + 21\*3 + 21\*6 + 22\*3 + 4 = 263  
+    $seq\_len$ is the number of frame
 
-$joint\_num=22$ is the number of joints used my HumanML3D SMPL representation. The last 2 joints (left and right hand) are discarded.    
+    $joint\_num=22$ is the number of joints used my HumanML3D SMPL representation. The last 2 joints (left and right hand) are discarded.    
 
 
-## Data analysis
-- Mocap Capture 
-    - [Click to download multi-view RGB Videos and .mot](https://ucsdcloud-my.sharepoint.com/:f:/g/personal/zweatherford_ucsd_edu/EuHlQ1oahHBGgRTADJoImk8BclFRfX5VLFcI0_CbKiZ9Tg?e=q4lBjq)  
+### 4. Data analysis
+
 
 
 
