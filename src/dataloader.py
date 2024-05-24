@@ -18,7 +18,7 @@ from utils import * # All hyperparameters and paths are defined here
 
 
 # Regex parse filename to get category and recordAttempt score
-FIND_LABEL_REGEX = r'^([A-Z]+)([0-9]+)(_([0-9]+))?\.trc$'
+FIND_LABEL_REGEX = r'^([A-Za-z]+)([0-9]+)(_([0-9]+))?\.trc$'
 """
 Explanation of the pattern:
 
