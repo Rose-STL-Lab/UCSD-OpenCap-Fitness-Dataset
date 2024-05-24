@@ -44,6 +44,7 @@ def create_pickle():
     data['label'] = np.array([ label_dict[x]  for x in data['label'] ])  
     data['label_dict'] = label_dict
 
+    os.makedirs(PKL_DIR,exist_ok=True)
     with open(os.path.join(PKL_DIR,'mcs_data_v2.pkl'),'wb') as f:
         joblib.dump(data,f)
 
