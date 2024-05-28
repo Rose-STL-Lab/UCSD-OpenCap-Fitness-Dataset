@@ -209,6 +209,8 @@ def retarget_sample(sample_path):
 def retarget_dataset():
 	for subject in os.listdir(INPUT_DIR):
 		for sample_path in os.listdir(os.path.join(INPUT_DIR,subject,'MarkerData')):
+			if sample_path.split('.')[-1] != "trc": continue # Not a .trc file
+
 			sample_path = os.path.join(INPUT_DIR,subject,'MarkerData',sample_path)
 			sample = retarget_sample(sample_path)
 

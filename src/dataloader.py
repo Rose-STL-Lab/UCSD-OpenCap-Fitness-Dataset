@@ -18,7 +18,7 @@ from utils import * # All hyperparameters and paths are defined here
 
 
 # Regex parse filename to get category and recordAttempt score
-FIND_LABEL_REGEX = r'^([A-Z]+)([0-9]+)(_([0-9]+))?\.trc$'
+FIND_LABEL_REGEX = r'^([A-Za-z]+)([0-9]+)(_([0-9]+))?\.trc$'
 """
 Explanation of the pattern:
 
@@ -71,7 +71,12 @@ class OpenCapDataLoader:
 			return label,recordAttempt
 	
 		else: 
-			raise KeyError(f'{sample_path} does not match regex')
+			try: 
+				label = sample_path.split('.')[0]
+				recordAttempt = 1 
+				return label,recordAttempt
+			except Exception as e: 
+				raise KeyError(f'{sample_path} does not match regex, {e}')
 
 
 	@staticmethod

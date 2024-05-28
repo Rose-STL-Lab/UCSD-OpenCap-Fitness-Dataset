@@ -87,7 +87,7 @@ class Visualizer:
 			self.ps_data['object_position'] = sample.joints_np[0,0]
 
 		# camera_position = np.array([0,0,3*self.ps_data['bbox'][0]])
-		camera_position = np.array([7*self.ps_data['bbox'][0],0.5*self.ps_data['bbox'][1],0]) + self.ps_data['object_position']
+		camera_position = np.array([3*self.ps_data['bbox'][0],0.5*self.ps_data['bbox'][1],0]) + self.ps_data['object_position']
 		look_at_position = np.array([0,0,0]) + self.ps_data['object_position']
 		ps.look_at(camera_position,look_at_position)
 
@@ -128,7 +128,7 @@ class Visualizer:
 		os.makedirs(os.path.join(video_dir,"images"),exist_ok=True)
 		os.makedirs(os.path.join(video_dir,"video"),exist_ok=True)
 
-		ps.show()
+		# ps.show()
 		print(f'Rendering images:')
 		for i in tqdm(range(verts.shape[0])):
 			ps_mesh.update_vertex_positions(verts[i])
