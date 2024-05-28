@@ -2,7 +2,7 @@ import os
 import sys
 import joblib
 import numpy as np
-
+from tqdm import tqdm
 from scipy.signal import find_peaks
 from scipy.spatial.transform import Rotation as R
 from utils import smpl_joints,cuda,SMPL_DIR,RENDER_DIR,SEGMENT_DIR
@@ -22,7 +22,7 @@ def assert_retarget_valid_smpl_format(data):
     import torch
     import polyscope as ps
     
-    sys.path.append("/media/shubh/Elements/RoseYu/digital-coach-shubh")
+    # sys.path.append("/media/shubh/Elements/RoseYu/digital-coach-shubh")
 
     from model.smpl import SMPL
 
@@ -453,6 +453,10 @@ def find_segments(mcs_smpl_path,framerate=60,visualize=False):
     if data['pose_params'].shape[0]/framerate < 4: # Skipping data cause it is too short
         print(f"Skipping data cause it is too short")
         return []
+    
+    if data['pose_params'].shape[0] < 400:  # Skip if content length is less than 400
+        print(f"Skipping {mcs_smpl_path} because content length is less than 400")
+        return []
 
     pose_velocity = calculate_angular_velocity(data['pose_params'].reshape((-1,24,3))) 
     # max_pose_velocity = 0.5*np.sum(pose_velocity**2,axis=1)
@@ -554,6 +558,8 @@ def find_segments(mcs_smpl_path,framerate=60,visualize=False):
 
     fig.update_layout(width=1600, height=800)
     fig.write_image(image_path + "_angular.png")
+    
+    SYSTEM_OS = os.uname().sysname
 
     if SYSTEM_OS == 'Linux':
         print(f"Runnig command: convert +append {image_path + '_angular.png'} {image_path + '_dtw.png'} {image_path + '.png'}")
@@ -563,34 +569,35 @@ def find_segments(mcs_smpl_path,framerate=60,visualize=False):
         import subprocess
 
         # Define the file paths
-        angular_png = file_path.replace('.npy', '_angular.png')
-        dtw_png = file_path.replace('.npy', '_dtw.png')
-        output_png = file_path.replace('.npy', '.png')
+        angular_png = image_path + '_angular.png'
+        dtw_png = image_path + '_dtw.png'
+        output_png = image_path + '.png'
 
         # Construct the command
-        # command = f"& \"C:\\Program Files\\ImageMagick-7.1.1-Q16-HDRI\\convert.exe\" +append \"{angular_png}\" \"{dtw_png}\" \"{output_png}\""
-        command = [
-            "C:\\Program Files\\ImageMagick-7.1.1-Q16-HDRI\\convert.exe",
-            "+append",
-            angular_png,
-            dtw_png,
-            output_png
-            ]
+        command = f"\"C:\\Program Files\\ImageMagick-7.1.1-Q16-HDRI\\convert.exe\" +append \"{angular_png}\" \"{dtw_png}\" \"{output_png}\""
+        # command = [
+        #     "C:\\Program Files\\ImageMagick-7.1.1-Q16-HDRI\\convert.exe",
+        #     "+append",
+        #     angular_png,
+        #     dtw_png,
+        #     output_png
+        #     ]
         try:
             # Run the command
-            subprocess.run(command, shell=True, check=True)
+            subprocess.run(command, shell = True, check=True)
             # Remove the temporary files
-            subprocess.run(f"del \"{angular_png}\" \"{dtw_png}\"", shell=True, check=True)
+            del_command = f"del \"{angular_png}\" \"{dtw_png}\""
+            subprocess.run(del_command, shell = True, check=True)
 
             # Print the command being executed
             print(f"Running command: {command}")
         except subprocess.CalledProcessError as e:
             # Print the error message
             print(f"Error: {e}")
-            err_files.append(file_path)
+            err_files.append(image_path)
 
-        else: 
-            raise OSError(f"Unable to use convert function to create visualization plots. Implemented for Linux and Windows. Not for {SYSTEM_OS}")        
+        # else: 
+        #     raise OSError(f"Unable to use convert function to create visualization plots. Implemented for Linux and Windows. Not for {SYSTEM_OS}")        
 
 
 if __name__ == "__main__": 
@@ -600,7 +607,10 @@ if __name__ == "__main__":
         mcs_smpl_path = sys.argv[1] 
         segments = find_segments(mcs_smpl_path,framerate=framerate,visualize=True)
     else: 
-        for smpl_file in os.listdir(SMPL_DIR): 
+        
+        base_names = set()
+        
+        for smpl_file in tqdm(os.listdir(SMPL_DIR)): 
             # if "BAP" not in smpl_file: 
                 # continue
             # if "BAPF" in smpl_file: 
@@ -608,9 +618,20 @@ if __name__ == "__main__":
             # file_name = os.path.basename(smpl_file).split(".")[0] + '.npy'
             # if os.path.isfile(os.path.join(SEGMENT_DIR,file_name)): 
                 # continue 
-
-            mcs_smpl_path = os.path.join(SMPL_DIR,smpl_file) 
-            segments = find_segments(mcs_smpl_path,framerate=framerate,visualize=False)
+            
+            base_name = os.path.splitext(smpl_file)[0].rsplit('_',1)[0]
+            if base_name not in base_names:
+                base_names.add(base_name)
+                matching_files = [f for f in os.listdir(SMPL_DIR) if f.startswith(base_name)]
+                if len(matching_files) == 1: 
+                    mcs_smpl_path = os.path.join(SMPL_DIR,matching_files[0]) 
+                    segments = find_segments(mcs_smpl_path,framerate=framerate,visualize=False)
+            
+            # mcs_smpl_path = os.path.join(SMPL_DIR,smpl_file) 
+            
+            
+            
+            # segments = find_segments(mcs_smpl_path,framerate=framerate,visualize=False)
 
 
             # time.sleep(5)
