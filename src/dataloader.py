@@ -1,6 +1,7 @@
 import os 
 import re
 import sys
+import logging
 from tqdm import tqdm
 import numpy as np 
 from functools import lru_cache
@@ -42,7 +43,10 @@ class OpenCapDataLoader:
 
 		self.sample_path = sample_path
 
-		self.openCapID,self.label,self.recordAttempt,self.sample = self.load_trc(sample_path)
+		self.openCapID,self.label,self.recordAttempt_str, self.recordAttempt,self.sample = self.load_trc(sample_path)
+		
+		assert f"{self.label}{self.recordAttempt_str}.trc" == os.path.basename(sample_path), f"Unable process sample name:{os.path.basename(sample_path)} label:{self.label} rec_str:{self.recordAttempt_str}"
+
 		self.name = f"{self.openCapID}_{self.label}_{self.recordAttempt}"
 		self.frames,self.joints,self.joints_np = self.process_trc(self.sample) 
 
@@ -66,15 +70,20 @@ class OpenCapDataLoader:
 			label = file_components[0]
 			recordAttempt = int(file_components[1])
 
+			recordAttempt_str = sample_path.replace(label,"").replace(".trc","")
+
+
 			if file_components[2] is not None:
-				print(f"Weird filename:{sample_path}")
-			return label,recordAttempt
+				logger = logging.getLogger(__name__)
+				logger.info(f"Weird filename:{sample_path}")
+			return label,recordAttempt_str,recordAttempt
 	
 		else: 
 			try: 
 				label = sample_path.split('.')[0]
 				recordAttempt = 1 
-				return label,recordAttempt
+				recordAttempt_str = ""
+				return label,recordAttempt_str,recordAttempt
 			except Exception as e: 
 				raise KeyError(f'{sample_path} does not match regex, {e}')
 
@@ -85,7 +94,6 @@ class OpenCapDataLoader:
 		assert "OpenCapData" not in os.path.basename(sample_path), f"Filepath:{os.path.basename(sample_path)} not sample."
 		assert "MarkerData" not in os.path.basename(sample_path), f"Filepath:{os.path.basename(sample_path)} not sample."
 
-		print(sample_path)
 		# File name details  
 		if SYSTEM_OS == 'Linux':
 			openCapID = next(filter(lambda x: "OpenCapData" in x,sample_path.split('/')))
@@ -95,7 +103,7 @@ class OpenCapDataLoader:
 			raise OSError(f"Unable to split .trc file to find OpenCapID. Implemented for Linux and Windows. Not for {SYSTEM_OS}")
 		openCapID = openCapID.split('_')[-1]
 
-		label,recordAttempt = OpenCapDataLoader.get_label(os.path.basename(sample_path))
+		label,recordAttempt_str,recordAttempt = OpenCapDataLoader.get_label(os.path.basename(sample_path))
 
 
 		# Open file and load xyz co-ordinate for every joint
@@ -124,7 +132,7 @@ class OpenCapDataLoader:
 		
 		# print(openCapID,label,recordAttempt,sample)
 
-		return openCapID,label,recordAttempt,sample
+		return openCapID,label,recordAttempt_str, recordAttempt,sample
 			
 
 	def process_trc(self,sample):
@@ -167,14 +175,12 @@ class OpenCapDataLoader:
 
 class MultiviewRGB: 
 	def __init__(self,sample):
-
-		self.sample_path = sample.sample_path
+		self.sample = sample
 		self.session_data = self.load_subjectID(sample.sample_path)
-		self.video_paths = self.get_video_paths(self.session_data)
-		self.cameras = self.get_camera_paths(sample.sample_path)
+		self.video_paths = self.get_video_paths()
+		# self.cameras = self.get_camera_paths(sample.sample_path)
 
 	def load_subjectID(self,sample_path):
-		
 		session_path = os.path.dirname(sample_path)
 		session_path = os.path.dirname(session_path)
 		session_path = os.path.join(session_path,'sessionMetadata.yaml')
@@ -189,19 +195,22 @@ class MultiviewRGB:
 
 		return session_data
 	
-	def get_video_paths(self,session_data):
-		opencap_input_path = os.path.join(DATA_DIR,"OpenCap",session_data['subjectID'])
+	def get_video_paths(self):
+		""""Get video paths for each camera in the session"""
+		video_path = os.path.dirname(self.sample_path)
+		video_path = os.path.dirname(video_path)
+		video_path = os.path.join(video_path,"Videos")
 		video_paths = []
 
-		ls_opencap_input_path = [ file for file in os.listdir(opencap_input_path) if "cam" in file.lower()]
-		ls_opencap_input_path = sorted(ls_opencap_input_path, key=lambda x: int(x.lower().replace("cam","")))
+		ls_video_path = [ file for file in os.listdir(video_path) if "cam" in file.lower()]
+		ls_video_path = sorted(ls_video_path, key=lambda x: int(x.lower().replace("cam","")))
 
-		for d in ls_opencap_input_path:
+		for d in ls_video_path:
 		
-			mov_file = [file for file in os.listdir(os.path.join(opencap_input_path, d))]
+			mov_file = [file for file in os.listdir(os.path.join(video_path,"InputMedia", sample.label +  d))]
 			if len(mov_file) == 0: continue
 
-			mov_file = os.path.join(opencap_input_path,d,mov_file[0])
+			mov_file = os.path.join(video_path,d,mov_file[0])
 			if not os.path.isdir(mov_file): continue
 
 			mov_name = [file for file in os.listdir(mov_file) if 'mov' in file ]
@@ -350,10 +359,13 @@ def analyze_dataset():
 	for subject in tqdm(os.listdir(INPUT_DIR)):
 		for sample_path in os.listdir(os.path.join(INPUT_DIR,subject,'MarkerData')):
 
+			if sample_path == "Settings": continue 
+
 			# TRC File analysis
 			sample_path = os.path.join(INPUT_DIR,subject,'MarkerData',sample_path)
+
 			sample = OpenCapDataLoader(sample_path)
-			
+
 			if sample.label not in frames_distribution: 
 				frames_distribution[sample.label] = {}
 			if sample.recordAttempt not in frames_distribution[sample.label]: 

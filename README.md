@@ -14,8 +14,6 @@ The repository contains information about the MCS dataset, which is used for spo
 ## Tasks
 
 - Remove SMPLLoader
-- Download videos using opencap batchDownload.ipynb: `https://github.com/stanfordnmbl/opencap-processing/blob/main/batchDownload.ipynb1`
-- Create a single logger for all tasks. And seperate SummaryWriter for plotting metrics. Split get_logger function 
 - Add docs using MKLdocsString 
 - Create best visualization portal. 
 - Integrate MOT file from https://github.com/davidpagnon/Pose2Sim_Blender/

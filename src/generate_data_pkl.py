@@ -39,7 +39,21 @@ def create_pickle():
             data['subject_id'].extend(subject_id)
 
     label_dict = {}
-    label_dict = {label:idx for idx,label in enumerate(data['label']) if label not in label_dict}         
+    for idx,label in enumerate(data['label']):
+        
+        if label == "squats" or label == "St":
+            label = "SQT"
+        # elif label == 
+        # fix any changes  
+        label = label.upper()
+
+
+        if label not in label_dict:
+            label_dict[label] = len(label_dict)
+
+        data['label'][idx] = label
+
+    print(label_dict)
 
     data['label'] = np.array([ label_dict[x]  for x in data['label'] ])  
     data['label_dict'] = label_dict
@@ -66,29 +80,12 @@ def get_pickle_data(sample_path,vis,video_dir=None):
     # Visualize Target skeleton
     # vis.render_skeleton(sample,video_dir=video_dir)
 
-
     # Load SMPL
     sample.smpl = SMPLRetarget(sample.joints_np.shape[0],device=None)	
     
-
-    # print("hello")
-    # print(sample.name)
-    # print(os.path.join(SMPL_DIR,sample.name+'.pkl'))
     sample.smpl.load(os.path.join(SMPL_DIR,sample.name+'.pkl'))
 
     _, joints3D,_ = sample.smpl()
-
-    # Visualize SMPL
-    # vis.render_smpl(sample,sample.smpl,video_dir=video_dir)
-    
-    
-    # Load Video
-    # sample.rgb = MultiviewRGB(sample)
-
-    # print(f"SubjectID:{sample.rgb.session_data['subjectID']} Action:{sample.label}")
-
-    # Visualize each view  
-    # vis.render_smpl_multi_view(sample,video_dir=None)
     
 
     # Load Segments
@@ -121,41 +118,9 @@ def get_pickle_data(sample_path,vis,video_dir=None):
         sample_data['label'].append(sample.label)
         sample_data['subject_id'].append(sample.openCapID)
     
-    # if video_dir is not None:
-    # 	video_dir = os.path.join(video_dir,f"{sample.openCapID}_{sample.label}_{sample.recordAttempt}")
-    # vis.render_smpl_multi_view(sample,video_dir=video_dir)
-    # print(sample.smpl.smpl_params["pose_params"].shape,sample.joints_3d.shape,sample.label,sample.rgb.session_data['subjectID'])
-
-    # sample_data = {}
-    # sample_data['poses'] = []
-    # sample_data['joints_3d'] = []
-    # sample_data['label'] = []
-    # sample_data['subject_id'] = []
-
-    # for s_ind, s in enumerate(sample.segments): 
-    #     sample_data['poses'].append(sample.smpl.smpl_params["pose_params"][s[0]:s[1]])
-    #     sample_data['joints_3d'].append(joints3D[s[0]:s[1]])
-    #     sample_data['label'].append(sample.label)
-    #     sample_data['subject_id'].append(sample.rgb.session_data['subjectID'])
-
     return sample_data['poses'],sample_data['joints_3d'],sample_data['label'],sample_data['subject_id']
 
 
 if __name__ == "__main__": 
-
-    # for smpl_file in os.listdir(SMPL_DIR): 
-    #     # if "BAP" not in smpl_file: 
-    #         # continue
-    #     # if "BAPF" in smpl_file: 
-    #         # continue
-    #     file_name = os.path.basename(smpl_file).split(".")[0] + '.npy'
-    #     if os.path.isfile(os.path.join(SEGMENT_DIR,file_name)): 
-    #         continue 
-
-    #     mcs_smpl_path = os.path.join(SMPL_DIR,smpl_file) 
+    set_logger(task_name="pkl-creation")
     segments = create_pickle()
-
-
-        # time.sleep(5)
-    
-    # print(err_files)

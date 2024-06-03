@@ -31,7 +31,7 @@ from renderer import Visualizer
 def retarget_opencap2smpl(sample:OpenCapDataLoader):
 
 	# Log progress
-	logger, writer = get_logger(task_name='Retarget')
+	logger, writer = set_logger(task_name='Retarget',return_writer=True)
 	logger.info(f"Retargetting file:{sample.openCapID}_{sample.label}")
 
 	# Metrics to measure

@@ -10,12 +10,36 @@ sys.path.append(parent_dir)
 
 from utils import *
 
+def load_data(args,npy_file):    
+    if args.data_rep == 'humanml':
+        motion = np.load(os.path.join(args.sample_dir, npy_file))
+        assert motion.shape[-1] == 263, f"Given data not in humanml format. Should have 263 dimensions found {motion.shape[-1]}" 
+        raise NotImplementedError  
+
+    elif args.data_rep == 'humanml':
+        motion = np.load(os.path.join(args.sample_dir, npy_file))
+        assert motion.shape[-1] == 263, f"Given data not in humanml format. Should have 263 dimensions found {motion.shape[-1]}" 
+        raise NotImplementedError  
+
+    elif args.data_rep == 'xyz' or args.data_rep == 't2m':
+        motion = np.load(os.path.join(args.sample_dir, npy_file))
+    elif args.data_rep == 'mdm':
+        with open(os.path.join(args.sample_dir, npy_file), 'rb') as f:
+            motion = np.load(f, allow_pickle=True).item()
+            assert np.all(motion['lengths'] == motion['lengths'][0]), f"Given data not in of same motion length format. Found {motion['lengths']}" 
+            motion = motion['motion'][:, :, :,:motion['lengths'][0]].transpose((0,3,1,2))
+    else:
+        raise NotImplementedError("Data representation not implemented. Please choose from 'xyz', 'humanml' or 'brax_ik'")
+
+    print(motion.shape)
+    return motion
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--sample_dir', type=str, default='data/humanml3d/new_joints_vecs')
-    parser.add_argument('--data_rep', type=str, default='xyz', choices=['xyz', 'humanml', 'brax_ik'])
-    parser.add_argument('--feet_threshold', type=float, default=10.0)
+    parser.add_argument('--data_rep', type=str, default='xyz', choices=['xyz', 'humanml', 'brax_ik','mdm','t2m'])
+    parser.add_argument('--feet_threshold', type=float, default=0.01)
+    parser.add_argument('--framerate', type=float, default=60)
     args = parser.parse_args()
 
     # find all npy files in sample_dir but not its subdirectories
@@ -29,28 +53,49 @@ if __name__ == '__main__':
     # calculate metrics
     loss_pn, loss_fl, loss_sk, metr_act = [], [], [], []
 
+    # Plot the min height to access the ground floor location
+    min_height_list = []
     for npy_file in tqdm(npy_files):
-        motion = np.load(os.path.join(args.sample_dir, npy_file))
+        motion = load_data(args,npy_file)
 
-        
-        if args.data_rep == 'humanml':
-            assert motion.shape[-1] == 263, f"Given data not in humanml format. Should have 263 dimensions found {motion.shape[-1]}" 
-            raise NotImplementedError  
-
-        elif args.data_rep == 'xyz':
-            raise NotImplementedError  
-        else:
-            raise NotImplementedError("Data representation not implemented. Please choose from 'xyz', 'humanml' or 'brax_ik'")
-        
-        y_translation = 520.0
         motion = torch.from_numpy(motion).float()
         min_height, idx = motion[..., 1].min(dim=-1)
+        min_height_list.extend(list(min_height.reshape(-1).data.cpu().numpy()))
+
+    # print(min_height_list)    
+    # import matplotlib.pyplot as plt
+    # plt.hist(min_height_list,bins=100)
+    # plt.show()
+
+    y_translation = -np.median(min_height_list)
+    # y_translation = 0
+
+    print(f"Ground height:",y_translation)
+
+    for npy_file in tqdm(npy_files):
+        motion = load_data(args,npy_file)
+        if args.data_rep == 'mdm':
+            motion = np.random.permutation(motion)
+
+
+        # import polyscope as ps
+        # ps.init()
+        # ps.register_point_cloud("motion",motion[0,0])
+        # ps.set_ground_plane_height_factor(y_translation)
+        # ps.show()
+
+        # y_translation = 0.0
+        motion = torch.from_numpy(motion).float()
+        min_height, idx = motion[..., 1].min(dim=-1)
+        # print(min_height,idx,motion[..., 1].shape)
         min_height = min_height + y_translation
         pn = -torch.minimum(min_height, torch.zeros_like(min_height))  # penetration
         pn[pn < args.feet_threshold] = 0.0
         fl = torch.maximum(min_height, torch.zeros_like(min_height))  # float
         fl[fl < args.feet_threshold] = 0.0
+
         bs, t = idx.shape
+
         I = torch.arange(bs).view(bs, 1).expand(-1, t-1).long()
         J = torch.arange(t-1).view(1, t-1).expand(bs, -1).long()
         J_next = J + 1
@@ -58,6 +103,7 @@ if __name__ == '__main__':
         feet_motion_next = motion[I, J_next, idx[:, :-1]]
         sk = torch.norm(feet_motion - feet_motion_next, dim=-1)
         contact = fl[:, :t] < args.feet_threshold
+
         sk = sk[contact[:, :-1]]  # skating
         # action: measure the continuity between frames
         vel = motion[:, 1:] - motion[:, :-1]
@@ -74,5 +120,5 @@ if __name__ == '__main__':
     loss_fl = torch.cat(loss_fl, dim=0)
     loss_sk = torch.cat(loss_sk, dim=0)
     metr_act = torch.cat(metr_act, dim=0)
-    print('PN: %.4f, FL: %.4f, SK: %.4f, AC: %.4f' % (loss_pn.mean(), loss_fl.mean(), loss_sk.mean(), metr_act.mean()))
+    print('PN: %.4f, FL: %.4f, SK: %.4f, AC: %.4f' % (loss_pn.mean(), loss_fl.mean(), args.framerate*loss_sk.mean(), metr_act.mean()))
     
