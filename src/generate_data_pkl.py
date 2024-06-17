@@ -10,6 +10,9 @@ from retarget2smpl import SMPLRetarget
 import traceback
 
 def create_pickle():
+
+    mcs_dict = load_mcs_scores(os.path.join(DATA_DIR,'mcs.csv')) 
+
     video_dir = RENDER_DIR
     
     vis = Visualizer()
@@ -119,6 +122,17 @@ def get_pickle_data(sample_path,vis,video_dir=None):
         sample_data['subject_id'].append(sample.openCapID)
     
     return sample_data['poses'],sample_data['joints_3d'],sample_data['label'],sample_data['subject_id']
+
+# Create a mapping from opencap id to mcs score for each category 
+def load_mcs_scores(csv_path):
+    mcs_sheet = pd.read_csv(csv_path,skiprows=1)
+    mcs_sheet = mcs_sheet.rename(columns={'Unnamed: 5': 'LLT-Twist', 'Unnamed: 7': 'RLT-Twist', 'Unnamed: 9': 'LLTF-Twist', 'Unnamed: 11': 'RLTF-Twist', 'Unnamed: 15': 'BAP-Pull' , 'Unnamed: 17': 'BAPF-Pull' })
+    mcs_scores = mcs_sheet.to_dict('index') 
+    mcs_scores = dict([ (mcs_scores[index]['OpenCapID'], mcs_scores[index]) for index in mcs_scores if type(mcs_scores[index]['OpenCapID']) == str])
+
+    return mcs_scores
+
+    return mcs_scores
 
 
 if __name__ == "__main__": 
