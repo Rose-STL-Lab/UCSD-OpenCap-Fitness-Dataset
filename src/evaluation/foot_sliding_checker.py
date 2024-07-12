@@ -10,11 +10,17 @@ sys.path.append(parent_dir)
 
 from utils import *
 
+from HumanML3D.common.motion_process import recover_from_ric  # For 263 representation
+
+
 def load_data(args,npy_file):    
-    if args.data_rep == 'humanml':
+    if args.data_rep == 'LIMO':
         motion = np.load(os.path.join(args.sample_dir, npy_file))
         assert motion.shape[-1] == 263, f"Given data not in humanml format. Should have 263 dimensions found {motion.shape[-1]}" 
-        raise NotImplementedError  
+    
+        motion = recover_from_ric(torch.from_numpy(motion).float(), 22).numpy()
+        return motion[None]
+        
 
     elif args.data_rep == 'humanml':
         motion = np.load(os.path.join(args.sample_dir, npy_file))
@@ -31,13 +37,12 @@ def load_data(args,npy_file):
     else:
         raise NotImplementedError("Data representation not implemented. Please choose from 'xyz', 'humanml' or 'brax_ik'")
 
-    print(motion.shape)
     return motion
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--sample_dir', type=str, default='data/humanml3d/new_joints_vecs')
-    parser.add_argument('--data_rep', type=str, default='xyz', choices=['xyz', 'humanml', 'brax_ik','mdm','t2m'])
+    parser.add_argument('--data_rep', type=str, default='xyz', choices=['xyz', 'humanml', 'brax_ik','mdm','t2m', 'LIMO'])
     parser.add_argument('--feet_threshold', type=float, default=0.01)
     parser.add_argument('--framerate', type=float, default=60)
     args = parser.parse_args()
@@ -45,8 +50,15 @@ if __name__ == '__main__':
     # find all npy files in sample_dir but not its subdirectories
     npy_files = []
     for file in os.listdir(args.sample_dir):
-        if file.endswith('.npy'):
-            npy_files.append(file)
+        if args.data_rep == 'LIMO':
+            if os.path.isdir(os.path.join(args.sample_dir,file)):
+                for f in os.listdir(os.path.join(args.sample_dir,file)): 
+                    if f.endswith('.npy'): 
+                        npy_files.append(os.path.join(args.sample_dir,file,f))
+        else: 
+            if file.endswith('.npy'):
+                npy_files.append(file)
+
     # random permute
     npy_files = np.random.permutation(npy_files)
 
@@ -70,7 +82,7 @@ if __name__ == '__main__':
     y_translation = -np.median(min_height_list)
     # y_translation = 0
 
-    print(f"Ground height:",y_translation)
+    print(f"Ground height:",y_translation, "calculated as the median of the min height across all samples")
 
     for npy_file in tqdm(npy_files):
         motion = load_data(args,npy_file)
@@ -120,5 +132,5 @@ if __name__ == '__main__':
     loss_fl = torch.cat(loss_fl, dim=0)
     loss_sk = torch.cat(loss_sk, dim=0)
     metr_act = torch.cat(metr_act, dim=0)
-    print('PN: %.4f, FL: %.4f, SK: %.4f, AC: %.4f' % (loss_pn.mean(), loss_fl.mean(), args.framerate*loss_sk.mean(), metr_act.mean()))
+    print('PN: %.4f (meters), FL: %.4f (meters), SK: %.4f (meters/seconds), AC: %.4f' % (loss_pn.mean(), loss_fl.mean(), args.framerate*loss_sk.mean(), metr_act.mean()))
     

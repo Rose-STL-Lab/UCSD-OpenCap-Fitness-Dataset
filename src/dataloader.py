@@ -44,7 +44,7 @@ class OpenCapDataLoader:
 		self.sample_path = sample_path
 
 		self.openCapID,self.label,self.recordAttempt_str, self.recordAttempt,self.sample = self.load_trc(sample_path)
-		
+
 		assert f"{self.label}{self.recordAttempt_str}.trc" == os.path.basename(sample_path), f"Unable process sample name:{os.path.basename(sample_path)} label:{self.label} rec_str:{self.recordAttempt_str}"
 
 		self.name = f"{self.openCapID}_{self.label}_{self.recordAttempt}"
@@ -55,6 +55,9 @@ class OpenCapDataLoader:
 
 		self.fps = int(1/np.mean(self.frames[1:]-self.frames[:-1]))
 		self.num_frames = len(self.frames)
+
+		# Load MOT file corresponding to the .trc file
+		self.mot = self.load_mot_files()
 
 
 
@@ -171,7 +174,63 @@ class OpenCapDataLoader:
 		joint_np = np.array([joints[joint] for joint in JOINT_NAMES]).transpose((1,0,2))
 
 		return frames,joints,joint_np
+	
+	def load_mot_files(self): 
+		mot_file_path = os.path.dirname(os.path.dirname(self.sample_path))
+		mot_file_path = os.path.join(mot_file_path, 'OpenSimData', 'Kinematics', self.label + self.recordAttempt_str + '.mot')
 
+		with open(mot_file_path,'r') as f: 
+			file_data = f.read().split('\n') 
+			
+			data = {'info':'', 'poses': []}
+			read_header = False
+			read_rows = 0 
+			
+			for line in file_data:  
+				line = line.strip()
+				if len(line) == 0:
+					continue
+				
+				if not read_header:
+					if line == 'endheader': 
+						read_header = True
+
+						logger = logging.getLogger(__name__)
+						# Assert all required fields are present in the header
+
+						if 'nColumns' not in data:
+							logger.warning(f"data does number of columns:{data} for {mot_file_path}")
+						if 'nRows' not in data:
+							logger.warning(f"data does not have number of rows:{data} for {mot_file_path}")
+					
+						continue 
+						
+					if '=' not in line: 
+						data['info'] += line + '\n' 
+					else: 
+						k,v = line.split('=')
+						if v.isnumeric():
+							data[k] = int(v)
+						else: 
+							data[k] = v
+				
+				else: 
+					rows = line.split()
+
+					if len(rows) != data['nColumns']:
+						logger.warning(f"row:{read_rows} does not contains the right number of values:{len(rows)} != {data['nColumns']}")
+
+					if read_rows == 0:
+						data['headers'] = rows 
+					else: 
+						rows = [float(row) for row in rows]
+						data['poses'].append(rows) 
+
+
+					read_rows += 1 		
+
+		data['poses'] = np.array(data['poses'])
+		return data			
 
 class MultiviewRGB: 
 	def __init__(self,sample):

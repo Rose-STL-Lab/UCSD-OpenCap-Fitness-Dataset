@@ -8,6 +8,7 @@ from renderer import Visualizer
 from dataloader import OpenCapDataLoader, MultiviewRGB
 from retarget2smpl import SMPLRetarget
 import traceback
+import pandas as pd
 
 def create_pickle():
 
@@ -21,6 +22,7 @@ def create_pickle():
     data['joints_3d'] = []
     data['label'] = []
     data['subject_id'] = []
+    data['mot'] = []
     
     for subject in os.listdir(INPUT_DIR):
         print("Subject:",subject)
@@ -30,7 +32,7 @@ def create_pickle():
             
             sample_path = os.path.join(INPUT_DIR,subject,'MarkerData',sample_path)
             try: 
-                poses, joints_3d, label, subject_id = get_pickle_data(sample_path,vis,video_dir=video_dir)
+                poses, joints_3d, label, subject_id, mot = get_pickle_data(sample_path,vis,video_dir=video_dir)
             except Exception as e: 
                 print(traceback.format_exc())
                 print(f"Error loading sample:{sample_path}:{e}")
@@ -40,6 +42,7 @@ def create_pickle():
             data['joints_3d'].extend(joints_3d)
             data['label'].extend(label)
             data['subject_id'].extend(subject_id)
+            data['mot'].extend(mot)
 
     label_dict = {}
     for idx,label in enumerate(data['label']):
@@ -62,7 +65,7 @@ def create_pickle():
     data['label_dict'] = label_dict
 
     os.makedirs(PKL_DIR,exist_ok=True)
-    with open(os.path.join(PKL_DIR,'mcs_data_v2.pkl'),'wb') as f:
+    with open(os.path.join(PKL_DIR,'mcs_data_v3.pkl'),'wb') as f:
         joblib.dump(data,f)
 
 def get_pickle_data(sample_path,vis,video_dir=None): 
@@ -101,6 +104,11 @@ def get_pickle_data(sample_path,vis,video_dir=None):
         sample_data['joints_3d'] = []
         sample_data['label'] = []
         sample_data['subject_id'] = []
+        sample_data['mot'] = []
+
+        if len(sample.mot['poses']) != len(sample.smpl.smpl_params["pose_params"]): 
+            print(f"Mismatch mot:{len(sample.mot['poses'])} != smpl:{len(sample.smpl.smpl_params['pose_params'])}")
+
 
         for s_ind, s in enumerate(sample.segments): 
             sample_data['poses'].append(sample.smpl.smpl_params["pose_params"][s[0]:s[1]])
@@ -108,6 +116,8 @@ def get_pickle_data(sample_path,vis,video_dir=None):
             sample_data['label'].append(sample.label)
             # sample_data['subject_id'].append(sample.rgb.session_data['subjectID'])
             sample_data['subject_id'].append(sample.openCapID)
+            sample_data['mot'].append(sample.mot['poses'][s[0]:s[1]])
+
     else: 
         # return [],[],[],[]
         sample_data = {}
@@ -115,13 +125,15 @@ def get_pickle_data(sample_path,vis,video_dir=None):
         sample_data['joints_3d'] = []
         sample_data['label'] = []
         sample_data['subject_id'] = []
+        sample_data['mot'] = []
         
         sample_data['poses'].append(sample.smpl.smpl_params["pose_params"])
         sample_data['joints_3d'].append(joints3D)
         sample_data['label'].append(sample.label)
         sample_data['subject_id'].append(sample.openCapID)
+        sample_data['mot'].append(sample.mot['poses'])
     
-    return sample_data['poses'],sample_data['joints_3d'],sample_data['label'],sample_data['subject_id']
+    return sample_data['poses'],sample_data['joints_3d'],sample_data['label'],sample_data['subject_id'],sample_data['mot']
 
 # Create a mapping from opencap id to mcs score for each category 
 def load_mcs_scores(csv_path):
