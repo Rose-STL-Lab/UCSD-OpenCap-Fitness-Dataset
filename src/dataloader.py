@@ -237,7 +237,7 @@ class MultiviewRGB:
 		self.sample = sample
 		self.session_data = self.load_subjectID(sample.sample_path)
 		self.video_paths = self.get_video_paths()
-		# self.cameras = self.get_camera_paths(sample.sample_path)
+		self.cameras = self.get_camera_paths(sample.sample_path)
 
 	def load_subjectID(self,sample_path):
 		session_path = os.path.dirname(sample_path)
@@ -256,31 +256,28 @@ class MultiviewRGB:
 	
 	def get_video_paths(self):
 		""""Get video paths for each camera in the session"""
-		video_path = os.path.dirname(self.sample_path)
+		video_path = os.path.dirname(self.sample.sample_path)
 		video_path = os.path.dirname(video_path)
 		video_path = os.path.join(video_path,"Videos")
 		video_paths = []
 
-		ls_video_path = [ file for file in os.listdir(video_path) if "cam" in file.lower()]
+		ls_video_path = [ file for file in os.listdir(video_path) if os.path.isdir(os.path.join(video_path,file))]
 		ls_video_path = sorted(ls_video_path, key=lambda x: int(x.lower().replace("cam","")))
 
 		for d in ls_video_path:
 		
-			mov_file = [file for file in os.listdir(os.path.join(video_path,"InputMedia", sample.label +  d))]
-			if len(mov_file) == 0: continue
+			current_camera_path = os.path.join(video_path,d,"InputMedia", self.sample.label + self.sample.recordAttempt_str)
 
-			mov_file = os.path.join(video_path,d,mov_file[0])
-			if not os.path.isdir(mov_file): continue
 
-			mov_name = [file for file in os.listdir(mov_file) if 'mov' in file ]
-			if len(mov_file) == 0: continue
-			mov_name = mov_name[0]
+			mp4_name = [file for file in os.listdir(os.path.join(current_camera_path)) if 'sync' in file ]
+			if len(mp4_name) == 0: continue
+			mp4_name = mp4_name[0]
 
-			mov_file = os.path.join(mov_file,mov_name)
+			mp4_name = os.path.join(current_camera_path,mp4_name)
 
-			assert os.path.isfile(mov_file), f"Mov file:{mov_file} does not exist"
+			assert os.path.isfile(mp4_name), f"Mov file:{mp4_name} does not exist"
 
-			video_paths.append(mov_file)
+			video_paths.append(mp4_name)
 		
 		# Make sure video paths are valid 
 		assert all([ os.path.isfile(file) for file in video_paths]), f"video paths do not exist. Check:{video_paths[0]} is an mp4" 	
@@ -289,34 +286,27 @@ class MultiviewRGB:
 
 	def get_camera_paths(self,sample_path): 
 		
-		# Get path to camera pickle files 
-		camera_dir = os.path.dirname(self.sample_path)
-		camera_dir = os.path.dirname(camera_dir)
-		camera_dir = os.path.join(camera_dir,'Videos')
-
 		# Get filenames corresponding to each video 
 		camera_filenames = self.video_paths
 		camera_filenames = [os.path.dirname(file) for file in camera_filenames]
 		camera_filenames = [os.path.dirname(file) for file in camera_filenames]
-		camera_filenames = [os.path.basename(file) for file in camera_filenames]
-
-		camera_filenames = [os.path.join(camera_dir,file) for file in camera_filenames]
+		camera_filenames = [os.path.dirname(file) for file in camera_filenames]
 		
 		# Make sure directories are valid 
 		assert all([ os.path.isdir(dir) for dir in camera_filenames]), f"Camera paths not directory. Check:{camera_filenames[0]} is an mp4" 	
 
 		cameras = []
-		for dir in camera_filenames: 
-			pickle_files = [ file for file in os.listdir(dir) if 'pickle' in file]
-			assert len(pickle_files) == 1, f"Unable to find pickle file in {dir}" 
+		for camera_ind, camera_filepath in enumerate(camera_filenames): 
+			pickle_files = [ file for file in os.listdir(camera_filepath) if 'pickle' in file]
+			assert len(pickle_files) == 1, f"Unable to find pickle file in {camera_filepath}" 
  
-			camera_filepath = pickle_files[0]
-			camera_filepath = os.path.join(dir, camera_filepath)
+			camera_filepath = os.path.join(camera_filepath, pickle_files[0])
 
 			assert os.path.isfile(camera_filepath), f"Unable to find pickle file:{camera_filepath}" 
 			
 			camera = joblib.load(camera_filepath)
 			camera = self.process_camera(camera)
+			camera['video_paths'] = self.video_paths[camera_ind]
 			cameras.append(camera)
 		
 		return cameras

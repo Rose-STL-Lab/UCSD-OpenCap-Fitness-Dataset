@@ -132,5 +132,6 @@ if __name__ == '__main__':
     loss_fl = torch.cat(loss_fl, dim=0)
     loss_sk = torch.cat(loss_sk, dim=0)
     metr_act = torch.cat(metr_act, dim=0)
-    print('PN: %.4f (meters), FL: %.4f (meters), SK: %.4f (meters/seconds), AC: %.4f' % (loss_pn.mean(), loss_fl.mean(), args.framerate*loss_sk.mean(), metr_act.mean()))
+    print('Mean: PN: %.4f (meters), FL: %.4f (meters), SK: %.4f (meters/seconds), AC: %.4f' % (loss_pn.mean(), loss_fl.mean(), args.framerate*loss_sk.mean(), metr_act.mean()))
+    print('STD : PN: %.4f (meters), FL: %.4f (meters), SK: %.4f (meters/seconds), AC: %.4f' % (loss_pn.std(), loss_fl.std(), args.framerate*loss_sk.std(), metr_act.std()))
     
