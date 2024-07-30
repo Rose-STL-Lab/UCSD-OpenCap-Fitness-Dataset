@@ -21,7 +21,7 @@ class Visualizer:
 		ps.set_automatically_compute_scene_extents(True)
 		ps.set_navigation_style("free")
 		# ps.set_view_projection_mode("orthographic")
-		# ps.set_ground_plane_mode('shadow_only')
+		ps.set_ground_plane_mode('tile_reflection')
 
 	def render_skeleton(self,sample,video_dir=None,screen_scale=[1.4,1.0,1.0],frame_rate=60): 
 		"""
