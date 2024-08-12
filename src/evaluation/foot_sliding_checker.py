@@ -24,8 +24,14 @@ def load_data(args,npy_file):
 
     elif args.data_rep == 'humanml':
         motion = np.load(os.path.join(args.sample_dir, npy_file))
-        assert motion.shape[-1] == 263, f"Given data not in humanml format. Should have 263 dimensions found {motion.shape[-1]}" 
-        raise NotImplementedError  
+        if motion.shape[-1] == 263: 
+            motion = recover_from_ric(torch.from_numpy(motion).float(), 22).numpy()
+            return motion[None,...]
+        elif motion.shape[-1] == 3: 
+            return motion[None,...]
+        else: 
+            raise AssertionError(f"Given data not in humanml format. Should have 263 dimensions or 3. found {motion.shape[-1]}")
+
 
     elif args.data_rep == 'xyz' or args.data_rep == 't2m':
         motion = np.load(os.path.join(args.sample_dir, npy_file))
@@ -132,6 +138,6 @@ if __name__ == '__main__':
     loss_fl = torch.cat(loss_fl, dim=0)
     loss_sk = torch.cat(loss_sk, dim=0)
     metr_act = torch.cat(metr_act, dim=0)
-    print('Mean: PN: %.4f (meters), FL: %.4f (meters), SK: %.4f (meters/seconds), AC: %.4f' % (loss_pn.mean(), loss_fl.mean(), args.framerate*loss_sk.mean(), metr_act.mean()))
-    print('STD : PN: %.4f (meters), FL: %.4f (meters), SK: %.4f (meters/seconds), AC: %.4f' % (loss_pn.std(), loss_fl.std(), args.framerate*loss_sk.std(), metr_act.std()))
-    
+    print('Mean: PN: %.4f (meters), FL: %.5f (meters), SK: %.4f (meters/seconds), AC: %.4f' % (loss_pn.mean(), loss_fl.mean(), args.framerate*loss_sk.mean(), metr_act.mean()))
+    print('STD : PN: %.4f (meters), FL: %.5f (meters), SK: %.4f (meters/seconds), AC: %.4f' % (loss_pn.std(), loss_fl.std(), args.framerate*loss_sk.std(), metr_act.std()))
+    print(f'& ${100*loss_pn.mean().item():.3f}^{{\pm {100*loss_pn.std().item():.3f}}}$ & ${100*loss_fl.mean().item():.3f}^{{\pm {100*loss_fl.std().item():.3f}}}$ & ${args.framerate*loss_sk.mean().item():.3f}^{{\pm {args.framerate*loss_sk.std().item():.3f}}}$')

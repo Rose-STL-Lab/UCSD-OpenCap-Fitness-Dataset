@@ -1,4 +1,4 @@
-# Sports Analytics Dataset 
+# UCSD OpenCap Fitness Dataset 
  
 [![](https://img.shields.io/badge/Project-Page-blue?style=flat&logo=Google%20chrome&logoColor=blue)](https://rose-stl-lab.github.io/UCSD-OpenCap-Fitness-Dataset/)
 [![](https://img.shields.io/badge/Paper-PDF-green?style=flat&logo=arXiv&logoColor=green)](https://www.overleaf.com/project/655aba246db8455baf77edd5)
@@ -15,19 +15,18 @@ The repository contains information about the MCS dataset, which is used for spo
 
 - Remove SMPLLoader
 - Add docs using MKLdocsString 
-- Create best visualization portal. 
-- Integrate MOT file from https://github.com/davidpagnon/Pose2Sim_Blender/
-- Change convert (raises error when os.system is called. )
+- Reaplace `convert` command to merge images (raises error when os.system is called. )
 - Main installation script to install convert and other libraries
 - Change delimiter for OpenCAP loader. make it compatible for linux and windows.
+
 
 
 ## Dataset Download links
 
 To download the dataset use the following links: 
-1. [OpenCap Master](https://docs.google.com/spreadsheets/d/1vkZ4-cdH2RjEOTZWhoYnSdXn8ruz9VFXZW7tg9fRYPE/edit?usp=sharing)
-2. [OpenCap] 
-3. [PPE Squat](https://ucsdcloud-my.sharepoint.com/:f:/g/personal/zweatherford_ucsd_edu/EuHlQ1oahHBGgRTADJoImk8BclFRfX5VLFcI0_CbKiZ9Tg?e=q4lBjq)  
+<!-- 1. [OpenCap Master](https://docs.google.com/spreadsheets/d/1vkZ4-cdH2RjEOTZWhoYnSdXn8ruz9VFXZW7tg9fRYPE/edit?usp=sharing) -->
+<!-- 2. [OpenCap]  -->
+<!-- 3. [PPE Squat](https://ucsdcloud-my.sharepoint.com/:f:/g/personal/zweatherford_ucsd_edu/EuHlQ1oahHBGgRTADJoImk8BclFRfX5VLFcI0_CbKiZ9Tg?e=q4lBjq)   -->
 
 
 ## Steps to re-create the dataset
@@ -89,6 +88,24 @@ python retarget2smpl.py
 python src/retarget2smpl.py
 python UCSD-OpenCap-Fitness-Dataset/src/retarget2smpl.py  
 ```
+
+
+## 0. General Setup 
+
+- Clone repo
+    ```
+        git clone --recursive https://github.com/Rose-STL-Lab/UCSD-OpenCap-Fitness-Dataset.git
+        cd UCSD-OpenCap-Fitness-Dataset
+        export UCSD_OPENCAP_DATASET_DIR=$PWD
+    ```
+
+- Creating environment
+
+    ```
+    conda create --name bitte -f environment.yml
+
+    ```
+
 
 ## 1. Visualization 
 
@@ -177,7 +194,10 @@ python src/temporal_segmentation.py
 ```
 
 
-## 3. Dataset Aggregration  
+## 3. Motion Aggregration
+
+- To train the generative model we use the 263 representation proposed by Guo et al. () 
+
 ### MDM Format
     Store the retargeted smpl data into a single .pkl file for analysis and training.
     ```
@@ -206,7 +226,46 @@ python src/temporal_segmentation.py
     $joint\_num=22$ is the number of joints used my HumanML3D SMPL representation. The last 2 joints (left and right hand) are discarded.    
 
 
-### 4. Data analysis
+### 4. Simulation
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1V1c-MYPiTuyefkh-6mNw8y9M1BYVCnnR?usp=sharing)
+
+
+To run locally 
+
+### Installation
+
+
+- OpenSim
+
+    ```
+    conda install -c opensim-org opensim
+    ```
+
+
+- OpenCap-processing
+    
+    ```
+    git clone 
+    ```
+
+- CasADi
+
+    ```
+        cd $UCSD_OPENCAP_DATASET_DIR/deps
+        git clone --recursive https://github.com/casadi/casadi.git casadi
+        cd casadi
+        git checkout 3.5.5
+        mkdir -p build
+        cp build
+        
+        apt install swig
+        cmake -DWITH_PYTHON=ON -DWITH_PYTHON3=ON ..
+        make
+        make install
+        cd $UCSD_OPENCAP_DATASET_DIR/deps/opencap-processing
+    ```
+
 
 
 
