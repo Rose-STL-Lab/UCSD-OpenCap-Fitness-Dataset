@@ -279,9 +279,7 @@ class Visualizer:
 		print(f"Running Command:",f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse {video_path}")
 
 	
-
-	def render_smpl_multi_view_callback(self,sample,video_dir=None):
-
+	def update_smpl_multi_view_callback(self,sample,video_dir=None):
 		assert hasattr(sample,'smpl'), "SMPL data not saved. run retarget2smpl.py first"
 		assert hasattr(sample,'rgb'), "Error loading RGB Data. Don't know the camera details. Cannot render in multiple views"
 
@@ -359,6 +357,18 @@ class Visualizer:
 		# 	mesh_colors[segment[0]:segment[1]] = colors[i:i+1]
 
 
+		# self.ps_data = {
+		# 	"experiment_options": self.exps,
+        #     "experiment_options_selected": self.exps[0],
+
+        #     "category_options": self.categories,
+        #     "category_options_selected": self.categories[1],
+
+        #     "trial": 1,
+		# }
+
+		# self.ps_data = {}
+
 		# Map all polyscope objects to ps_data
 		self.ps_data['ps_mesh'] = ps_mesh
 		self.ps_data['ps_target_skeleton'] = ps_target_skeleton
@@ -392,6 +402,24 @@ class Visualizer:
 		self.ps_data['ui_text'] = "Enter Instructions here"
 
 
+		self.ps_data['session_options_selected'] = sample.openCapID
+		self.ps_data['session_options'] = [ x.replace("OpenCapData_","") for x in  os.listdir(INPUT_DIR)]
+
+		# Load info about other trial samples.
+		other_session_trials_details = [ os.path.join(os.path.dirname(sample.sample_path), x)  for x in os.listdir(os.path.dirname(sample.sample_path))]
+		other_session_trials_details = [OpenCapDataLoader.get_label(os.path.basename(x)) for x in other_session_trials_details if os.path.isfile(x)]
+		
+		self.ps_data['category_options_selected'] = sample.label 
+		self.ps_data['category_options'] = list(set([x[0] for x in other_session_trials_details]))
+		
+
+		self.ps_data['trial_options_selected'] = sample.recordAttempt_str
+		self.ps_data['trial_options'] = [ x[1] for x in other_session_trials_details if x[0] == self.ps_data['category_options_selected']]
+
+
+	def render_smpl_multi_view_callback(self,sample,video_dir=None):
+
+		self.update_smpl_multi_view_callback(sample,video_dir=video_dir)
 		ps.set_user_callback(self.callback)
 		ps.show()	
 
@@ -565,44 +593,73 @@ class Visualizer:
 
 		if(psim.TreeNode("Load other samples")):
 
+
+
+
+
+		
+		
+
 			# psim.TextUnformatted("Load Optimized samples")
 
-			changed = psim.BeginCombo("- Experiement", self.ps_data["experiment_options_selected"])
-			if changed:
-				for val in self.ps_data["experiment_options"]:
-					_, selected = psim.Selectable(val, selected=self.ps_data["experiment_options_selected"]==val)
+			changed = psim.BeginCombo("- Experiement", self.ps_data["session_options_selected"])
+			if changed:				
+				for val in self.ps_data["session_options"]:
+					_, selected = psim.Selectable(val, selected=self.ps_data["session_options_selected"]==val)
 					if selected:
-						self.ps_data["experiment_options_selected"] = val
+						self.ps_data["session_options_selected"] = val
+
+						sample_path = os.path.join(INPUT_DIR,f"OpenCapData_{self.ps_data['session_options_selected']}","MarkerData")
+						other_session_trials_details = [ os.path.join(sample_path, x)  for x in os.listdir(sample_path)]
+						other_session_trials_details = [OpenCapDataLoader.get_label(os.path.basename(x)) for x in other_session_trials_details if os.path.isfile(x)]
+
+						self.ps_data['category_options'] = list(set([x[0] for x in other_session_trials_details]))
+						self.ps_data['trial_options'] = [ x[1] for x in other_session_trials_details if x[0] == self.ps_data['category_options_selected']]
 				psim.EndCombo()
 
-			changed = psim.BeginCombo("- Category", self.ps_data["category_options_selected"])
+			changed = psim.BeginCombo("- Excercise Type", self.ps_data["category_options_selected"])
 			if changed:
 				for val in self.ps_data["category_options"]:
 					_, selected = psim.Selectable(val, selected=self.ps_data["category_options_selected"]==val)
 					if selected:
 						self.ps_data["category_options_selected"] = val
+
+						# Load info about other trial samples.
+						sample_path = os.path.join(INPUT_DIR,f"OpenCapData_{self.ps_data['session_options_selected']}","MarkerData")
+						other_session_trials_details = [ os.path.join(sample_path, x)  for x in os.listdir(sample_path)]
+						other_session_trials_details = [OpenCapDataLoader.get_label(os.path.basename(x)) for x in other_session_trials_details if os.path.isfile(x)]
+						self.ps_data['category_options'] = list(set([x[0] for x in other_session_trials_details]))
+				psim.EndCombo()
+
+			changed = psim.BeginCombo("- Trial", self.ps_data["trial_options_selected"])
+			if changed:
+				for val in self.ps_data["trial_options"]:
+					_, selected = psim.Selectable(val, selected=self.ps_data["trial_options_selected"]==val)
+					if selected:
+						self.ps_data["trial_options_selected"] = val
+
+
+						# Load info about other trial samples.
+						sample_path = os.path.join(INPUT_DIR,f"OpenCapData_{self.ps_data['session_options_selected']}","MarkerData")
+						other_session_trials_details = [ os.path.join(sample_path, x)  for x in os.listdir(sample_path)]
+						other_session_trials_details = [OpenCapDataLoader.get_label(os.path.basename(x)) for x in other_session_trials_details if os.path.isfile(x)]
+
+						self.ps_data['trial_options'] = [ x[1] for x in other_session_trials_details if x[0] == self.ps_data['category_options_selected']]
 				psim.EndCombo()
 
 
-
-			changed, new_rank = psim.InputInt("- rank", self.ps_data["rank"], step=1, step_fast=10) 
-			if changed: 
-				self.ps_data["rank"] = new_rank # Only change values when button is pressed. Otherwise will be continously update like self.t 
-				
-				if self.ps_data["rank"] > 100:
-					self.ps_data['rank'] = 100
-				elif self.ps_data["rank"] < 1: 
-					self.ps_data['rank'] = 1 
-				else: 
-					pass
-
 			
 			if(psim.Button("Load Optimized samples")):
-				self.update_skeleton()
+				sample_path = os.path.join(INPUT_DIR,f"OpenCapData_{self.ps_data['session_options_selected']}")
+				sample_path = os.path.join(sample_path, "MarkerData")
+				sample_path = os.path.join(sample_path,f"{self.ps_data['category_options_selected']}{self.ps_data['trial_options_selected']}.trc")
+				sample = load_subject(sample_path)
+				self.update_smpl_multi_view_callback(sample)
 			psim.TreePop()
 
 
 		# psim.End()
+
 
 
 # Load file and render skeleton for each video
@@ -628,35 +685,38 @@ def render_smpl(sample_path,vis,video_dir=None):
 		Load input (currently .trc files) and save all the rendering videos + images (retargetting to smp, getting input text, per frame annotations etc.) 
 	"""
 	sample_path = os.path.abspath(sample_path)
-	sample = OpenCapDataLoader(sample_path)
-	
 
+	sample = load_subject(sample_path)
+	
+	
 	if video_dir is not None:
 		video_dir = os.path.join(video_dir,f"{sample.openCapID}_{sample.label}_{sample.recordAttempt}")
 		if os.path.isfile(os.path.join(video_dir,f"{sample.label}_{sample.recordAttempt}_smpl.mp4")): 
-			return  
+			return
+	
+	# Visualize each view  
+	vis.render_smpl_multi_view_callback(sample,video_dir=video_dir)
 
 
 
-
+def load_subject(sample_path):
+	sample = OpenCapDataLoader(sample_path)
+	
 	# Visualize Target skeleton
 	# vis.render_skeleton(sample,video_dir=video_dir)
 
-
 	# Load SMPL
 	sample.smpl = SMPLRetarget(sample.joints_np.shape[0],device=None)	
-	print(sample.name)
 	sample.smpl.load(os.path.join(SMPL_DIR,sample.name+'.pkl'))
 
 	# Visualize SMPL
 	# vis.render_smpl(sample,sample.smpl,video_dir=video_dir)
 	# vis.render_smpl(sample,sample.smpl,video_dir=None)
 	
-	
 	# Load Video
 	sample.rgb = MultiviewRGB(sample)
 
-	print(f"SubjectID:{sample.rgb.session_data['subjectID']} Action:{sample.label}")
+	print(f"Session ID: {sample.name} SubjectID:{sample.rgb.session_data['subjectID']} Action:{sample.label}")
 
 	# Load LaiArnoldModified2017
 	from osim import OSIMSequence
@@ -671,22 +731,13 @@ def render_smpl(sample_path,vis,video_dir=None):
 
 	sample.osim = OSIMSequence.from_files(osim_path, mot_path, geometry_path=osim_geometry_path )
 
-	# Visualize each view  
-	vis.render_smpl_multi_view_callback(sample,video_dir=video_dir)
-	
 
 	# Load Segments
 	if os.path.exists(os.path.join(SEGMENT_DIR,sample.name+'.npy')):
 		sample.segments = np.load(os.path.join(SEGMENT_DIR,sample.name+'.npy'),allow_pickle=True).item()['segments']
-	else: 
-		return 
-	
-
-	vis.render_smpl_multi_view(sample,video_dir=video_dir)
 
 
-
-
+	return sample
 
 if __name__ == "__main__": 
 
