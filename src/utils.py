@@ -1,24 +1,29 @@
 import os
 import sys 
+import random
+import numpy as np
 import argparse
 import logging
-import numpy as np
 import torch
 import platform
 
 
 ########################## GET SYSTEM Information ##########################
-
 SYSTEM_OS = platform.system()
 
 
 
 ########################## SET RANDOM SEEDS #################################
-np.random.seed(2)
-torch.manual_seed(5)
+seed = 69
+random.seed(seed)
+np.random.seed(seed)
+torch.manual_seed(seed)
+torch.cuda.manual_seed_all(seed)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 
 ############################# LIBRARY IMPORTS ####################################################
-assert __file__[-1] != '/' , f'File:{__init__}, cannot be parsed' 
+assert __file__[-1] != '/' , f'File:{__file__}, cannot be parsed' 
 SRC_DIR,_ = os.path.split(os.path.abspath(__file__))
 HOME_DIR,_ = os.path.split(SRC_DIR)
 RABIT_DIR  = os.path.join(HOME_DIR,'RaBit')
@@ -160,7 +165,7 @@ class CustomFormatter(logging.Formatter):
 		formatter = logging.Formatter(log_fmt)
 		return formatter.format(record)
 
-def get_logger(task_name=None):
+def set_logger(task_name=None,return_writer=False):
 
 	os.makedirs(os.path.join(LOG_DIR, task_name),exist_ok=True)
 
@@ -178,13 +183,16 @@ def get_logger(task_name=None):
 	handler.setLevel(level=logging.DEBUG if DEBUG else logging.WARNING)
 	handler.setFormatter(CustomFormatter())
 	logger.addHandler(handler)
+	if not return_writer:
+		return logger
 
-	try: 
-		from tensorboardX import SummaryWriter
-		writer = SummaryWriter(os.path.join(LOG_DIR, task_name))
+	else:
+		try: 
+			from tensorboardX import SummaryWriter
+			writer = SummaryWriter(os.path.join(LOG_DIR, task_name))
 
-	except ModuleNotFoundError:
-		logger.warning("Unable to load tensorboardX to write summary.")
-		writer = None
+		except ModuleNotFoundError:
+			logger.warning("Unable to load tensorboardX to write summary.")
+			writer = None
 
-	return logger, writer
+		return logger, writer

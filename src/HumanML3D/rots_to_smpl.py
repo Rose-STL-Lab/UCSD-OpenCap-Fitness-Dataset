@@ -9,14 +9,19 @@ import torch
 from common.skeleton import Skeleton
 from common.quaternion import *
 import joblib
+# from human_body_prior.body_model.body_model import BodyModel
+# from human_body_prior.tools.omni_tools import copy2cpu as c2c
 from tqdm import tqdm
 
 from scipy.ndimage import gaussian_filter
 
-parent_dir = pjoin(os.path.dirname(__file__), '..')
+sys.path.append
+
+parent_dir = os.path.join(os.path.dirname(__file__), '..')
 sys.path.append(parent_dir)
 
 from utils import *
+
 
 
 os.environ['PYOPENGL_PLATFORM'] = 'egl'
@@ -339,6 +344,42 @@ def rots_to_h3d(rots, pose_seq_np):
     data, ground_positions, positions, l_velocity = process_file(pose_seq_np_n[:,:22,:], 0.002,tgt_offsets)
     return data
 
+
+# def decompose_h3d(data): 
+#     sample = 
+#     data = root_data
+#     data = np.concatenate([data, ric_data[:-1]], axis=-1)
+#     data = np.concatenate([data, rot_data[:-1]], axis=-1)
+#     data = np.concatenate([data, local_vel], axis=-1)
+#     data = np.concatenate([data, feet_l, feet_r], axis=-1)
+
+#     return 
+
+def read_file_to_list(filename):
+    with open(filename, 'r') as file:
+        # Read all lines from the file, strip newline characters, and return as a list
+        return [line.strip() for line in file.readlines()]
+
+
+# Create a mapping from opencap id to mcs score for each category 
+def load_mcs_scores(csv_path):
+    import pandas as pd
+    mcs_sheet = pd.read_csv(csv_path,skiprows=1)
+    mcs_sheet = mcs_sheet.rename(columns={'Unnamed: 5': 'LLT-Twist', 'Unnamed: 7': 'RLT-Twist', 'Unnamed: 9': 'LLTF-Twist', 'Unnamed: 11': 'RLTF-Twist', 'Unnamed: 15': 'BAP-Pull' , 'Unnamed: 17': 'BAPF-Pull' })
+    mcs_scores = mcs_sheet.to_dict('index') 
+    mcs_scores = dict([ (mcs_scores[index]['OpenCapID'], mcs_scores[index]) for index in mcs_scores if type(mcs_scores[index]['OpenCapID']) == str])
+
+    for subject_id in mcs_scores: 
+        for excer in mcs_scores[subject_id]:
+            try: 
+                mcs_scores[subject_id][excer] = int(mcs_scores[subject_id][excer])
+            except ValueError as e: 
+                mcs_scores[subject_id][excer] = None
+
+
+
+    return mcs_scores
+
 if __name__ == "__main__":
     text = "text"
     action_to_desc = {
@@ -356,34 +397,51 @@ if __name__ == "__main__":
         "LSLS":"left single leg squat",
         "PU":"push up"
     }
-    pkl_data = joblib.load(open(os.path.join(PKL_DIR, "mcs_data.pkl"),"rb"))
-    print(f"Items in .pkl file:{os.path.join(PKL_DIR, 'mcs_data.pkl')}")
+    pkl_data = joblib.load(open(os.path.join(DATA_DIR,"pkl","mcs_data_v3.pkl"),"rb"))
     for k,v in pkl_data.items():
         try:
             print(k,v.shape)
         except:
             print(k,len(v))
     
-    # Directory for Human ML 3D format 
-    save_dir1 = pjoin(HUMANML_DIR,"new_joints")
+    mcs_scores = load_mcs_scores(os.path.join(DATA_DIR,'mcs.csv'))
+    mode = "eval"
+    save_dir1 = mode + "/new_joints/"
+    save_dir2 = mode +  "/new_joints_vecs/"
+    save_dir3 = mode +  "/original_texts/"
+    save_dir4 = mode +  "/mot_data/"
+    mcs_dir = mode +  "/mcs/"
+    
+    os.makedirs(mode,exist_ok=True)
     os.makedirs(save_dir1,exist_ok=True)
-
-    # Directory for Root rotation invariant coordinates
-    save_dir2 = pjoin(HUMANML_DIR,"new_joints_vecs")
     os.makedirs(save_dir2,exist_ok=True)
-
-    # Texts with POS tagging
-    save_dir3 = pjoin(HUMANML_DIR,"original_texts")
     os.makedirs(save_dir3,exist_ok=True)
+    os.makedirs(save_dir4,exist_ok=True)
+    os.makedirs(mcs_dir,exist_ok=True)
 
-    print("Saving data in HumanML3D format at:",save_dir1,save_dir2,save_dir3)
 
-    for i,(rots_axisangle, pose_seq_np, label) in tqdm(enumerate(zip(pkl_data["poses"], pkl_data["joints_3d"],pkl_data["label"]))):
+    file_set = read_file_to_list(mode + ".txt")
+
+    for i,(rots_axisangle, pose_seq_np, label, subject_id, mot) in tqdm(enumerate(zip(pkl_data["poses"], pkl_data["joints_3d"],pkl_data["label"],pkl_data["subject_id"],pkl_data["mot"]))):
+        if subject_id not in file_set:
+            continue
         h3d_format = rots_to_h3d(rots_axisangle, pose_seq_np)
         rec_ric_data = recover_from_ric(torch.from_numpy(h3d_format).unsqueeze(0).float(), joints_num)
+        action = next(k for k,v in pkl_data["label_dict"].items() if v==label)
+        if action.upper() not in action_to_desc:
+            continue
         np.save(pjoin(save_dir1, str(i)+".npy"), rec_ric_data.squeeze().numpy())
         np.save(pjoin(save_dir2, str(i)+".npy"), h3d_format)
-        action = next(k for k,v in pkl_data["label_dict"].items() if v==label)
-        act = action_to_desc[action]
-        with open(pjoin(save_dir3,str(i)+".txt"),'w') as f:
+        
+        
+        act = action_to_desc[action.upper()]
+        with open(save_dir3+str(i)+".txt",'w') as f:
             f.write(act)
+
+        if subject_id in mcs_scores and action in mcs_scores[subject_id] and mcs_scores[subject_id][action] is not None: 
+            with open(mcs_dir+str(i)+".txt",'w') as f:
+                f.write(str(mcs_scores[subject_id][action]))   
+
+        # if subject_id in mcs_scores
+        
+        np.save(pjoin(save_dir4, str(i)+".npy"), mot)

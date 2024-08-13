@@ -1,6 +1,7 @@
 import os 
 import re
 import sys
+import logging
 from tqdm import tqdm
 import numpy as np 
 from functools import lru_cache
@@ -42,7 +43,10 @@ class OpenCapDataLoader:
 
 		self.sample_path = sample_path
 
-		self.openCapID,self.label,self.recordAttempt,self.sample = self.load_trc(sample_path)
+		self.openCapID,self.label,self.recordAttempt_str, self.recordAttempt,self.sample = self.load_trc(sample_path)
+
+		assert f"{self.label}{self.recordAttempt_str}.trc" == os.path.basename(sample_path), f"Unable process sample name:{os.path.basename(sample_path)} label:{self.label} rec_str:{self.recordAttempt_str}"
+
 		self.name = f"{self.openCapID}_{self.label}_{self.recordAttempt}"
 		self.frames,self.joints,self.joints_np = self.process_trc(self.sample) 
 
@@ -51,6 +55,9 @@ class OpenCapDataLoader:
 
 		self.fps = int(1/np.mean(self.frames[1:]-self.frames[:-1]))
 		self.num_frames = len(self.frames)
+
+		# Load MOT file corresponding to the .trc file
+		self.mot = self.load_mot_files()
 
 
 
@@ -66,12 +73,22 @@ class OpenCapDataLoader:
 			label = file_components[0]
 			recordAttempt = int(file_components[1])
 
+			recordAttempt_str = sample_path.replace(label,"").replace(".trc","")
+
+
 			if file_components[2] is not None:
-				print(f"Weird filename:{sample_path}")
-			return label,recordAttempt
+				logger = logging.getLogger(__name__)
+				logger.info(f"Weird filename:{sample_path}")
+			return label,recordAttempt_str,recordAttempt
 	
 		else: 
-			raise KeyError(f'{sample_path} does not match regex')
+			try: 
+				label = sample_path.split('.')[0]
+				recordAttempt = 1 
+				recordAttempt_str = ""
+				return label,recordAttempt_str,recordAttempt
+			except Exception as e: 
+				raise KeyError(f'{sample_path} does not match regex, {e}')
 
 
 	@staticmethod
@@ -80,7 +97,6 @@ class OpenCapDataLoader:
 		assert "OpenCapData" not in os.path.basename(sample_path), f"Filepath:{os.path.basename(sample_path)} not sample."
 		assert "MarkerData" not in os.path.basename(sample_path), f"Filepath:{os.path.basename(sample_path)} not sample."
 
-		print(sample_path)
 		# File name details  
 		if SYSTEM_OS == 'Linux':
 			openCapID = next(filter(lambda x: "OpenCapData" in x,sample_path.split('/')))
@@ -90,7 +106,7 @@ class OpenCapDataLoader:
 			raise OSError(f"Unable to split .trc file to find OpenCapID. Implemented for Linux and Windows. Not for {SYSTEM_OS}")
 		openCapID = openCapID.split('_')[-1]
 
-		label,recordAttempt = OpenCapDataLoader.get_label(os.path.basename(sample_path))
+		label,recordAttempt_str,recordAttempt = OpenCapDataLoader.get_label(os.path.basename(sample_path))
 
 
 		# Open file and load xyz co-ordinate for every joint
@@ -119,7 +135,7 @@ class OpenCapDataLoader:
 		
 		# print(openCapID,label,recordAttempt,sample)
 
-		return openCapID,label,recordAttempt,sample
+		return openCapID,label,recordAttempt_str, recordAttempt,sample
 			
 
 	def process_trc(self,sample):
@@ -158,18 +174,72 @@ class OpenCapDataLoader:
 		joint_np = np.array([joints[joint] for joint in JOINT_NAMES]).transpose((1,0,2))
 
 		return frames,joints,joint_np
+	
+	def load_mot_files(self): 
+		mot_file_path = os.path.dirname(os.path.dirname(self.sample_path))
+		mot_file_path = os.path.join(mot_file_path, 'OpenSimData', 'Kinematics', self.label + self.recordAttempt_str + '.mot')
 
+		with open(mot_file_path,'r') as f: 
+			file_data = f.read().split('\n') 
+			
+			data = {'info':'', 'poses': []}
+			read_header = False
+			read_rows = 0 
+			
+			for line in file_data:  
+				line = line.strip()
+				if len(line) == 0:
+					continue
+				
+				if not read_header:
+					if line == 'endheader': 
+						read_header = True
+
+						logger = logging.getLogger(__name__)
+						# Assert all required fields are present in the header
+
+						if 'nColumns' not in data:
+							logger.warning(f"data does number of columns:{data} for {mot_file_path}")
+						if 'nRows' not in data:
+							logger.warning(f"data does not have number of rows:{data} for {mot_file_path}")
+					
+						continue 
+						
+					if '=' not in line: 
+						data['info'] += line + '\n' 
+					else: 
+						k,v = line.split('=')
+						if v.isnumeric():
+							data[k] = int(v)
+						else: 
+							data[k] = v
+				
+				else: 
+					rows = line.split()
+
+					if len(rows) != data['nColumns']:
+						logger.warning(f"row:{read_rows} does not contains the right number of values:{len(rows)} != {data['nColumns']}")
+
+					if read_rows == 0:
+						data['headers'] = rows 
+					else: 
+						rows = [float(row) for row in rows]
+						data['poses'].append(rows) 
+
+
+					read_rows += 1 		
+
+		data['poses'] = np.array(data['poses'])
+		return data			
 
 class MultiviewRGB: 
 	def __init__(self,sample):
-
-		self.sample_path = sample.sample_path
+		self.sample = sample
 		self.session_data = self.load_subjectID(sample.sample_path)
-		self.video_paths = self.get_video_paths(self.session_data)
+		self.video_paths = self.get_video_paths()
 		self.cameras = self.get_camera_paths(sample.sample_path)
 
 	def load_subjectID(self,sample_path):
-		
 		session_path = os.path.dirname(sample_path)
 		session_path = os.path.dirname(session_path)
 		session_path = os.path.join(session_path,'sessionMetadata.yaml')
@@ -184,30 +254,30 @@ class MultiviewRGB:
 
 		return session_data
 	
-	def get_video_paths(self,session_data):
-		opencap_input_path = os.path.join(DATA_DIR,"OpenCap",session_data['subjectID'])
+	def get_video_paths(self):
+		""""Get video paths for each camera in the session"""
+		video_path = os.path.dirname(self.sample.sample_path)
+		video_path = os.path.dirname(video_path)
+		video_path = os.path.join(video_path,"Videos")
 		video_paths = []
 
-		ls_opencap_input_path = [ file for file in os.listdir(opencap_input_path) if "cam" in file.lower()]
-		ls_opencap_input_path = sorted(ls_opencap_input_path, key=lambda x: int(x.lower().replace("cam","")))
+		ls_video_path = [ file for file in os.listdir(video_path) if os.path.isdir(os.path.join(video_path,file))]
+		ls_video_path = sorted(ls_video_path, key=lambda x: int(x.lower().replace("cam","")))
 
-		for d in ls_opencap_input_path:
+		for d in ls_video_path:
 		
-			mov_file = [file for file in os.listdir(os.path.join(opencap_input_path, d))]
-			if len(mov_file) == 0: continue
+			current_camera_path = os.path.join(video_path,d,"InputMedia", self.sample.label + self.sample.recordAttempt_str)
 
-			mov_file = os.path.join(opencap_input_path,d,mov_file[0])
-			if not os.path.isdir(mov_file): continue
 
-			mov_name = [file for file in os.listdir(mov_file) if 'mov' in file ]
-			if len(mov_file) == 0: continue
-			mov_name = mov_name[0]
+			mp4_name = [file for file in os.listdir(os.path.join(current_camera_path)) if 'sync' in file ]
+			if len(mp4_name) == 0: continue
+			mp4_name = mp4_name[0]
 
-			mov_file = os.path.join(mov_file,mov_name)
+			mp4_name = os.path.join(current_camera_path,mp4_name)
 
-			assert os.path.isfile(mov_file), f"Mov file:{mov_file} does not exist"
+			assert os.path.isfile(mp4_name), f"Mov file:{mp4_name} does not exist"
 
-			video_paths.append(mov_file)
+			video_paths.append(mp4_name)
 		
 		# Make sure video paths are valid 
 		assert all([ os.path.isfile(file) for file in video_paths]), f"video paths do not exist. Check:{video_paths[0]} is an mp4" 	
@@ -216,34 +286,27 @@ class MultiviewRGB:
 
 	def get_camera_paths(self,sample_path): 
 		
-		# Get path to camera pickle files 
-		camera_dir = os.path.dirname(self.sample_path)
-		camera_dir = os.path.dirname(camera_dir)
-		camera_dir = os.path.join(camera_dir,'Videos')
-
 		# Get filenames corresponding to each video 
 		camera_filenames = self.video_paths
 		camera_filenames = [os.path.dirname(file) for file in camera_filenames]
 		camera_filenames = [os.path.dirname(file) for file in camera_filenames]
-		camera_filenames = [os.path.basename(file) for file in camera_filenames]
-
-		camera_filenames = [os.path.join(camera_dir,file) for file in camera_filenames]
+		camera_filenames = [os.path.dirname(file) for file in camera_filenames]
 		
 		# Make sure directories are valid 
 		assert all([ os.path.isdir(dir) for dir in camera_filenames]), f"Camera paths not directory. Check:{camera_filenames[0]} is an mp4" 	
 
 		cameras = []
-		for dir in camera_filenames: 
-			pickle_files = [ file for file in os.listdir(dir) if 'pickle' in file]
-			assert len(pickle_files) == 1, f"Unable to find pickle file in {dir}" 
+		for camera_ind, camera_filepath in enumerate(camera_filenames): 
+			pickle_files = [ file for file in os.listdir(camera_filepath) if 'pickle' in file]
+			assert len(pickle_files) == 1, f"Unable to find pickle file in {camera_filepath}" 
  
-			camera_filepath = pickle_files[0]
-			camera_filepath = os.path.join(dir, camera_filepath)
+			camera_filepath = os.path.join(camera_filepath, pickle_files[0])
 
 			assert os.path.isfile(camera_filepath), f"Unable to find pickle file:{camera_filepath}" 
 			
 			camera = joblib.load(camera_filepath)
 			camera = self.process_camera(camera)
+			camera['video_paths'] = self.video_paths[camera_ind]
 			cameras.append(camera)
 		
 		return cameras
@@ -345,10 +408,13 @@ def analyze_dataset():
 	for subject in tqdm(os.listdir(INPUT_DIR)):
 		for sample_path in os.listdir(os.path.join(INPUT_DIR,subject,'MarkerData')):
 
+			if sample_path == "Settings": continue 
+
 			# TRC File analysis
 			sample_path = os.path.join(INPUT_DIR,subject,'MarkerData',sample_path)
+
 			sample = OpenCapDataLoader(sample_path)
-			
+
 			if sample.label not in frames_distribution: 
 				frames_distribution[sample.label] = {}
 			if sample.recordAttempt not in frames_distribution[sample.label]: 
