@@ -292,6 +292,8 @@ class OSIMSequence():
 
         motion = np.array(mot.poses.T)    
 
+        print("Mot Data:",motion)
+
         # Crop and sample
         sf = start_frame or 0
         ef = end_frame or motion.shape[0]
