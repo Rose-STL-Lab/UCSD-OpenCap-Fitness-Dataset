@@ -180,7 +180,7 @@ class OSIMSequence():
             
             # Add to the dictionary
             self.meshes_dict[node_name] = node_mesh
-        print(self.meshes_dict)
+        # print(self.meshes_dict)
 
 
     def create_template(self):
@@ -292,7 +292,7 @@ class OSIMSequence():
 
         motion = np.array(mot.poses.T)    
 
-        print("Mot Data:",motion)
+        # print("Mot Data:",motion)
 
         # Crop and sample
         sf = start_frame or 0

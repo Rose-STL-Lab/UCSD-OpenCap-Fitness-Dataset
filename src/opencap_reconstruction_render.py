@@ -10,6 +10,8 @@ from utils import *
 from dataloader import OpenCapDataLoader,MultiviewRGB
 from smpl_loader import SMPLRetarget
 # from osim import OSIMSequence
+# Load LaiArnoldModified2017
+from osim import OSIMSequence
 
 class Visualizer: 
 	def __init__(self): 
@@ -90,7 +92,7 @@ class Visualizer:
 			extrinsics = ps.CameraExtrinsics(root=camera['position'], look_dir=camera['look_dir'], up_dir=camera['up_dir'])
 			params = ps.CameraParameters(intrinsics, extrinsics)
 			ps_cam = ps.register_camera_view(f"Cam{i}", params)
-			print("Camera:",params.get_view_mat())
+			# print("Camera:",params.get_view_mat())
 			ps_cams.append(ps_cam)
 
 
@@ -244,6 +246,7 @@ class Visualizer:
 
 		image_path = os.path.join(video_dir,"images",f"smpl_\%d.png")
 		video_path = os.path.join(video_dir,"video",f"{self.ps_data['label']}_{self.ps_data['recordAttempt']}_smpl.mp4")
+		video_path = os.path.abspath(video_path)
 		palette_path = os.path.join(video_dir,"video",f"smpl.png")
 		frame_rate = self.ps_data['fps']
 		os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -vf palettegen {palette_path}")
@@ -431,17 +434,17 @@ class Visualizer:
 
 
 # Load file and render skeleton for each video
-def render_dataset():
+def render_dataset(sample_path=None):
 	video_dir = RENDER_DIR
 	
 	vis = Visualizer()
 	
 	for subject in os.listdir(INPUT_DIR):
-		for sample_path in os.listdir(os.path.join(INPUT_DIR,subject,'MarkerData')):
-			sample_path = os.path.join(INPUT_DIR,subject,'MarkerData',sample_path)
-			render_smpl(sample_path,vis,video_dir=video_dir)
+		for trial_path in os.listdir(os.path.join(INPUT_DIR,subject,'MarkerData')):
+			trial_path = os.path.join(INPUT_DIR,subject,'MarkerData',trial_path)
+			render_smpl(trial_path, sample_path, vis,video_dir=video_dir)
 
-def render_smpl(sample_path,vis,video_dir=None): 
+def render_smpl(sample_path,retrieval_path, vis,video_dir=None): 
 	"""
 		Render dataset samples 
 			
@@ -455,7 +458,7 @@ def render_smpl(sample_path,vis,video_dir=None):
 	sample_path = os.path.abspath(sample_path)
 
 	sample = load_subject(sample_path)
-	
+	sample = load_retrived_samples(sample,retrieval_path)
 	
 	if video_dir is not None:
 		video_dir = os.path.join(video_dir,f"{sample.openCapID}_{sample.label}_{sample.recordAttempt}")
@@ -467,7 +470,7 @@ def render_smpl(sample_path,vis,video_dir=None):
 
 
 
-def load_subject(sample_path):
+def load_subject(sample_path,retrieval_path=None):
 	sample = OpenCapDataLoader(sample_path)
 	
 	# Visualize Target skeleton
@@ -486,12 +489,13 @@ def load_subject(sample_path):
 
 	print(f"Session ID: {sample.name} SubjectID:{sample.rgb.session_data['subjectID']} Action:{sample.label}")
 
-	# Load LaiArnoldModified2017
-	from osim import OSIMSequence
+
 	osim_path = os.path.dirname(os.path.dirname(sample.sample_path)) 
 	osim_path = os.path.join(osim_path,'OpenSimData','Model', 'LaiArnoldModified2017_poly_withArms_weldHand_scaled.osim')
 	osim_geometry_path = os.path.join(DATA_DIR,'OpenCap_LaiArnoldModified2017_Geometry')
-	
+
+
+	###################### Subject Details ####################################################	
 	mot_path = os.path.dirname(os.path.dirname(sample.sample_path))
 	mot_path = os.path.join(mot_path,'OpenSimData','Kinematics',sample.label+ sample.recordAttempt_str + '.mot')
 	print("Loading User motion file:",mot_path)
@@ -507,25 +511,6 @@ def load_subject(sample_path):
 	# mot_path = os.path.join(mot_path,'OpenSimData','Dynamics',sample.label+ sample.recordAttempt_str, f'kinematics_activations_{sample.label+ sample.recordAttempt_str}_muscle_driven.mot')
 
 	sample.osim = OSIMSequence.from_files(osim_path, mot_path, geometry_path=osim_geometry_path,ignore_fps=True )
-
-
-	mot_path = os.path.dirname(os.path.dirname(sample.sample_path))
-	mot_path = os.path.join(mot_path,'OpenSimData','Pred_Kinematics',sample.label+ sample.recordAttempt_str + '.mot')
-	print("Loading Reconstrction file:",mot_path)
-
-	# sample.osim_pred = OSIMSequence.from_files(osim_path, mot_path, geometry_path=osim_geometry_path,ignore_fps=True )	
-
-
-	# mot_path = "/media/shubh/Elements/RoseYu/UCSD-OpenCap-Fitness-Dataset/MCS_DATA/train_forward_pass/mot_output/0.mot"
-	mot_path = "/media/shubh/Elements/RoseYu/UCSD-OpenCap-Fitness-Dataset/MCS_DATA/mot_visualization/constrained_latents/entry_0.mot"
-	# print("Loading Generatrion file:",mot_path)
-	sample.osim_pred = OSIMSequence.from_files(osim_path, mot_path, geometry_path=osim_geometry_path,ignore_fps=True )	
-	print("MOT DATA:",sample.osim_pred.motion.shape)
-	print("TIME:",sample.osim_pred.motion[:,0])
-	print("Pelivs:",sample.osim_pred.motion[:,1:3])
-	# print("New SIM model")
-
-
 	# Load Segments
 	if os.path.exists(os.path.join(SEGMENT_DIR,sample.name+'.npy')):
 		sample.segments = np.load(os.path.join(SEGMENT_DIR,sample.name+'.npy'),allow_pickle=True).item()['segments']
@@ -533,13 +518,51 @@ def load_subject(sample_path):
 
 	return sample
 
+def load_retrived_samples(sample, retrieval_path): 
+	###################### GENERATION DETAILS ####################################################
+
+	# mot_path = os.path.dirname(os.path.dirname(sample.sample_path))
+	# mot_path = os.path.join(mot_path,'OpenSimData','VQVAE7_Temporal_Kinematics',sample.label+ sample.recordAttempt_str + '.mot')
+	# print("Loading Reconstrction file:",mot_path)
+
+	# sample.osim_pred = OSIMSequence.from_files(osim_path, mot_path, geometry_path=osim_geometry_path,ignore_fps=True )	
+
+	# mot_path = "/media/shubh/Elements/RoseYu/UCSD-OpenCap-Fitness-Dataset/MCS_DATA/mot_visualization/constrained_mot_0.002/12.mot"
+	# mot_path = "/media/shubh/Elements/RoseYu/UCSD-OpenCap-Fitness-Dataset/MCS_DATA/mot_visualization/normal_latents_196/entry_2.mot"
+
+	# mot_path = "/media/shubh/Elements/RoseYu/UCSD-OpenCap-Fitness-Dataset/MCS_DATA/mot_visualization/normal_latents_temporal_consistency_v2/entry_9.mot"
+
+
+	assert retrieval_path and os.path.isfile(retrieval_path), f"Unable to load .mot file:{retrieval_path}" 
+
+	mot_path = retrieval_path
+	print("Loading Generatrion file:",mot_path)
+
+	osim_path = os.path.dirname(os.path.dirname(sample.sample_path)) 
+	osim_path = os.path.join(osim_path,'OpenSimData','Model', 'LaiArnoldModified2017_poly_withArms_weldHand_scaled.osim')
+	osim_geometry_path = os.path.join(DATA_DIR,'OpenCap_LaiArnoldModified2017_Geometry')
+
+	sample.osim_pred = OSIMSequence.from_files(osim_path, mot_path, geometry_path=osim_geometry_path,ignore_fps=True )	
+	print("MOT DATA:",sample.osim_pred.motion.shape)
+	print("Pelivs:",np.rad2deg(sample.osim_pred.motion[::10,1:3]))
+	print("KNEE Left:",np.rad2deg(sample.osim_pred.motion[::10,10]))
+	print("TIME:",sample.osim_pred.motion[::10,0])
+	sample.osim_pred.vertices[:,:,2] -= 1	
+	
+
+	return sample
+
+
+
+
 if __name__ == "__main__": 
 
 	if len(sys.argv) == 1: 
 		render_dataset()
 	else:
-		sample_path = sys.argv[1]
+		trial_path = sys.argv[1] if len(sys.argv) > 0 else "Temporal_Generation_Data/000cffd9-e154-4ce5-a075-1b4e1fd66201/MarkerData/sqt01.trc"
+		sample_path = sys.argv[2] if len(sys.argv) > 1 else "MCS_DATA/mot_visualization/normal_latents_temporal_consistency/entry_3.mot"
 		vis = Visualizer()
-		video_dir = sys.argv[2] if len(sys.argv) > 2 else None
-		render_smpl(sample_path,vis,video_dir)
+		video_dir = sys.argv[3] if len(sys.argv) > 2 else None
+		render_smpl(trial_path, sample_path,vis,video_dir)
 
