@@ -48,6 +48,7 @@ SEGMENT_DIR = os.path.join(DATA_DIR,'segments')
 PKL_DIR = os.path.join(DATA_DIR,'pkl')
 HUMANML_DIR = os.path.join(DATA_DIR,'humanml3d')
 
+SAMPLE_PATH = os.path.join(DATA_DIR,"mot_visualization")
 # ############################ DATASET CONSTANTS #######################################################
 # Excercise categories 
 LABELS = ['LSLS', 'CMJ', 'PU', 'SQT', 'RSLS', 'BAPF', 'LLTF', 'LLT', 'RCMJ', 'PUF', 'BAP', 'RLTF', 'RLT', 'LCMJ'] 

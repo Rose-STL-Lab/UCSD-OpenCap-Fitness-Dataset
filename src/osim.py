@@ -20,6 +20,17 @@ import pickle as pkl
 
 from utils import DATA_DIR
 
+import traceback
+
+
+class NOT_MOT_FILE_ERROR(Exception):
+
+    def __init__(self, message):
+        self.message = message + "\m" + traceback.format_exc()
+        
+        super().__init__(self.message)
+
+
 def load_osim(osim_path, geometry_path, ignore_geometry=False):
     """Load an osim file"""
        
@@ -48,6 +59,49 @@ def load_osim(osim_path, geometry_path, ignore_geometry=False):
 
     assert osim is not None, "Could not load osim file: {}".format(osim_path)
     return osim
+
+
+def load_mot(osim, mot_file, start_frame=None, end_frame=None, fps_out: int=None, ignore_fps=False): 
+    
+    # Need absolute path
+    mot_file = os.path.abspath(mot_file)
+    
+    # Load the .mot file
+    mot: nimble.biomechanics.OpenSimMot = nimble.biomechanics.OpenSimParser.loadMot(
+                osim.skeleton, mot_file)
+
+    motion = np.array(mot.poses.T)    
+
+    # print("Mot Data:",motion)
+
+    # Crop and sample
+    sf = start_frame or 0
+    ef = end_frame or motion.shape[0]
+    motion = motion[sf:ef]
+
+    # estimate fps_in
+    ts = np.array(mot.timestamps)   
+    fps_estimated = 1/np.mean(ts[1:] - ts[:-1])
+    fps_in = int(round(fps_estimated)) 
+    print(f'Estimated fps for the .mot sequence: {fps_estimated}, rounded to {fps_in}')
+    
+    if not ignore_fps:
+        assert abs(1 - fps_estimated/fps_in) < 1e-5 , f"FPS estimation might be bad, {fps_estimated} rounded to {fps_in}, check."
+
+        if fps_out is not None:
+            assert fps_in%fps_out == 0, 'fps_out must be a interger divisor of fps_in'
+            mask = np.arange(0, motion.shape[0], fps_in//fps_out)
+            print(f'Resampling from {fps_in} to {fps_out} fps. Keeping every {fps_in//fps_out}th frame')
+            # motion = resample_positions(motion, fps_in, fps_out) #TODO: restore this 
+            motion = motion[mask]   
+    
+            
+        del mot
+    else:
+        fps_out = fps_in
+
+    return motion
+
 
 class OSIMSequence():
     """
@@ -180,7 +234,7 @@ class OSIMSequence():
             
             # Add to the dictionary
             self.meshes_dict[node_name] = node_mesh
-        print(self.meshes_dict)
+        # print(self.meshes_dict)
 
 
     def create_template(self):
@@ -284,6 +338,7 @@ class OSIMSequence():
         """
 
         # Load osim file
+        print("Loading OSIM files:", osim_path, geometry_path, ignore_geometry)
         osim = load_osim(osim_path, geometry_path=geometry_path, ignore_geometry=ignore_geometry)
 
         # Load the .mot file
@@ -292,7 +347,7 @@ class OSIMSequence():
 
         motion = np.array(mot.poses.T)    
 
-        print("Mot Data:",motion)
+        # print("Mot Data:",motion)
 
         # Crop and sample
         sf = start_frame or 0

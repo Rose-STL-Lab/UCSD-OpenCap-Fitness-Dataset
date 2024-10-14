@@ -35,6 +35,7 @@ This regex pattern should match filenames like the ones you've provided.
 
 
 # Module to store motion data for each sample 
+# TODO: Rename OpenCapDataLoader to TRCLoader
 class OpenCapDataLoader:
 	# Loads files from opencap and 
 	def __init__(self,sample_path): 
@@ -97,14 +98,22 @@ class OpenCapDataLoader:
 		assert "OpenCapData" not in os.path.basename(sample_path), f"Filepath:{os.path.basename(sample_path)} not sample."
 		assert "MarkerData" not in os.path.basename(sample_path), f"Filepath:{os.path.basename(sample_path)} not sample."
 
-		# File name details  
-		if SYSTEM_OS == 'Linux':
-			openCapID = next(filter(lambda x: "OpenCapData" in x,sample_path.split('/')))
-		elif SYSTEM_OS == 'Windows': 
-			openCapID = next(filter(lambda x: "OpenCapData" in x,sample_path.split('\\')))
-		else: 
-			raise OSError(f"Unable to split .trc file to find OpenCapID. Implemented for Linux and Windows. Not for {SYSTEM_OS}")
-		openCapID = openCapID.split('_')[-1]
+		print(sample_path)
+
+		try: 
+
+			# File name details  
+			if SYSTEM_OS == 'Linux':
+				openCapID = next(filter(lambda x: "OpenCapData" in x,sample_path.split('/')))
+			elif SYSTEM_OS == 'Windows': 
+				openCapID = next(filter(lambda x: "OpenCapData" in x,sample_path.split('\\')))
+			else: 
+				raise OSError(f"Unable to split .trc file to find OpenCapID. Implemented for Linux and Windows. Not for {SYSTEM_OS}")
+			openCapID = openCapID.split('_')[-1]
+		except Exception as os_error: 
+			openCapID = os.path.basename(os.path.dirname(os.path.dirname(sample_path))) # Asssuming directory structure sessionID/MarkerData/<sample>.trc, taking session as the parent of parent of 
+			print(f"Asssuming directory structure sessionID/MarkerData/<sample>.trc, taking session as the parent of parent of {os_error}")
+			print("OpenCap ID:",openCapID) 
 
 		label,recordAttempt_str,recordAttempt = OpenCapDataLoader.get_label(os.path.basename(sample_path))
 
