@@ -31,6 +31,13 @@ class NorthUCSDServer(paramiko.SSHClient):
             f.write("".join(online_experimenets))
 
 
+
+    ################# MAKE SURE ONLY ACCESS ELEMENTS IN THE ENV ##################################
+
+    
+
+
+
 class YadiUCSDServer(paramiko.SSHClient):
     def __init__(self, *args, **kwargs):
         key_filename = kwargs['key_filename']

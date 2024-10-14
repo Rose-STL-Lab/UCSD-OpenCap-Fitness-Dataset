@@ -1,3 +1,13 @@
+# File to check foot sliding in the generated data
+# Usage python foot_sliding_checker.py --sample_dir <> --data_rep <>
+# Example:
+#  --sample_dir digital-coach-anwesh/output/LIMO_generations --data_rep 263  
+#  --sample_dir data/MDM-Generations/samples_mcs_trans_enc_512_v2_000600000_seed10_all_texts --data_rep mdm
+#  --sample_dir data/humanml3d/eval/new_joints --data_rep xyz
+#  --sample_dir data/humanml3d/eval/new_joints --data_rep humanml
+#  --sample_dir digital-coach-anwesh/output-foot/LIMO_Foot_all_median --data_rep LIMO
+#  --sample_dir data/T2M-Generations/VQVAE_2/pred --data_rep t2m
+
 import os
 import sys
 import torch
@@ -10,11 +20,11 @@ sys.path.append(parent_dir)
 
 from utils import *
 
-from HumanML3D.common.motion_process import recover_from_ric  # For 263 representation
 
 
 def load_data(args,npy_file):    
     if args.data_rep == 'LIMO':
+        from HumanML3D.common.motion_process import recover_from_ric  # For 263 representation
         motion = np.load(os.path.join(args.sample_dir, npy_file))
         assert motion.shape[-1] == 263, f"Given data not in humanml format. Should have 263 dimensions found {motion.shape[-1]}" 
     
@@ -23,6 +33,7 @@ def load_data(args,npy_file):
         
 
     elif args.data_rep == 'humanml':
+        from HumanML3D.common.motion_process import recover_from_ric  # For 263 representation
         motion = np.load(os.path.join(args.sample_dir, npy_file))
         if motion.shape[-1] == 263: 
             motion = recover_from_ric(torch.from_numpy(motion).float(), 22).numpy()
@@ -32,7 +43,6 @@ def load_data(args,npy_file):
         else: 
             raise AssertionError(f"Given data not in humanml format. Should have 263 dimensions or 3. found {motion.shape[-1]}")
 
-
     elif args.data_rep == 'xyz' or args.data_rep == 't2m':
         motion = np.load(os.path.join(args.sample_dir, npy_file))
     elif args.data_rep == 'mdm':
@@ -40,6 +50,19 @@ def load_data(args,npy_file):
             motion = np.load(f, allow_pickle=True).item()
             assert np.all(motion['lengths'] == motion['lengths'][0]), f"Given data not in of same motion length format. Found {motion['lengths']}" 
             motion = motion['motion'][:, :, :,:motion['lengths'][0]].transpose((0,3,1,2))
+    
+    elif args.data_rep == 'mot' or args.data_rep == 'osim': 
+        subject_path = os.path.join(args.sample_dir, npy_file)
+        osim_path = os.path.dirname(os.path.dirname(subject_path)) 
+        osim_path = os.path.join(osim_path,'OpenSimData','Model', 'LaiArnoldModified2017_poly_withArms_weldHand_scaled.osim')
+        osim_geometry_path = os.path.join(DATA_DIR,'OpenCap_LaiArnoldModified2017_Geometry')
+        mot_path = os.path.join(args.sample_dir, npy_file)
+
+        from osim import OSIMSequence
+        osim = OSIMSequence.from_files(osim_path, mot_path, geometry_path=osim_geometry_path,ignore_fps=True )
+
+        motion = osim.vertices    
+
     else:
         raise NotImplementedError("Data representation not implemented. Please choose from 'xyz', 'humanml' or 'brax_ik'")
 

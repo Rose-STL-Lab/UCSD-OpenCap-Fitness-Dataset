@@ -561,8 +561,8 @@ if __name__ == "__main__":
 		render_dataset()
 	else:
 		trial_path = sys.argv[1] if len(sys.argv) > 0 else "Temporal_Generation_Data/000cffd9-e154-4ce5-a075-1b4e1fd66201/MarkerData/sqt01.trc"
-		sample_path = sys.argv[2] if len(sys.argv) > 1 else "MCS_DATA/mot_visualization/normal_latents_temporal_consistency/entry_3.mot"
+		retrieval_path = sys.argv[2] if len(sys.argv) > 1 else "MCS_DATA/mot_visualization/normal_latents_temporal_consistency/entry_3.mot"
 		vis = Visualizer()
 		video_dir = sys.argv[3] if len(sys.argv) > 2 else None
-		render_smpl(trial_path, sample_path,vis,video_dir)
+		render_smpl(trial_path, retrieval_path,vis,video_dir)
 

@@ -47,3 +47,18 @@ YADI = {
     'IP_ADDRESS' : 'roselab1.ucsd.edu',
     'USER': 'ubuntu',
     'PORT' : 12700 }
+
+    
+# echo 'import os
+
+# def get_screen_size():
+#     if os.name == "posix":
+#         if os.uname().sysname == "Linux":
+#             os.system("xdpyinfo | grep dimensions")
+#         elif os.uname().sysname == "Darwin":
+#             os.system("system_profiler SPDisplaysDataType | grep Resolution")
+#     elif os.name == "nt":
+#         os.system("wmic path Win32_VideoController get CurrentHorizontalResolution,CurrentVerticalResolution")
+
+# if __name__ == "__main__":
+#     get_screen_size()' > get_screen_size.py

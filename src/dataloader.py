@@ -35,6 +35,7 @@ This regex pattern should match filenames like the ones you've provided.
 
 
 # Module to store motion data for each sample 
+# TODO: Rename OpenCapDataLoader to TRCLoader
 class OpenCapDataLoader:
 	# Loads files from opencap and 
 	def __init__(self,sample_path): 
