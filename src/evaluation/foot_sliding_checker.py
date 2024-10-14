@@ -52,16 +52,11 @@ def load_data(args,npy_file):
             motion = motion['motion'][:, :, :,:motion['lengths'][0]].transpose((0,3,1,2))
     
     elif args.data_rep == 'mot' or args.data_rep == 'osim': 
-        subject_path = os.path.join(args.sample_dir, npy_file)
-        osim_path = os.path.dirname(os.path.dirname(subject_path)) 
-        osim_path = os.path.join(osim_path,'OpenSimData','Model', 'LaiArnoldModified2017_poly_withArms_weldHand_scaled.osim')
-        osim_geometry_path = os.path.join(DATA_DIR,'OpenCap_LaiArnoldModified2017_Geometry')
-        mot_path = os.path.join(args.sample_dir, npy_file)
+        assert os.path.abspath(args.sample_dir) == os.path.abspath(args.sample_dir), f"No need for npy_files file:{args.sample_dir}"
+        motion = np.load(args.sample_dir)
+        S, R, T, J, D =  motion.shape
 
-        from osim import OSIMSequence
-        osim = OSIMSequence.from_files(osim_path, mot_path, geometry_path=osim_geometry_path,ignore_fps=True )
-
-        motion = osim.vertices    
+        motion = motion.reshape((S*R, T, J,D))
 
     else:
         raise NotImplementedError("Data representation not implemented. Please choose from 'xyz', 'humanml' or 'brax_ik'")
@@ -71,22 +66,26 @@ def load_data(args,npy_file):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--sample_dir', type=str, default='data/humanml3d/new_joints_vecs')
-    parser.add_argument('--data_rep', type=str, default='xyz', choices=['xyz', 'humanml', 'brax_ik','mdm','t2m', 'LIMO'])
+    parser.add_argument('--data_rep', type=str, default='xyz', choices=['xyz', 'humanml', 'brax_ik','mdm','t2m', 'LIMO', 'mot'])
     parser.add_argument('--feet_threshold', type=float, default=0.01)
     parser.add_argument('--framerate', type=float, default=60)
     args = parser.parse_args()
 
-    # find all npy files in sample_dir but not its subdirectories
-    npy_files = []
-    for file in os.listdir(args.sample_dir):
-        if args.data_rep == 'LIMO':
-            if os.path.isdir(os.path.join(args.sample_dir,file)):
-                for f in os.listdir(os.path.join(args.sample_dir,file)): 
-                    if f.endswith('.npy'): 
-                        npy_files.append(os.path.join(args.sample_dir,file,f))
-        else: 
-            if file.endswith('.npy'):
-                npy_files.append(file)
+    
+    if os.path.isfile(args.sample_dir): 
+        npy_files = [args.sample_dir]
+    else: 
+        npy_files = []
+        for file in os.listdir(args.sample_dir):
+            if args.data_rep == 'LIMO':
+                if os.path.isdir(os.path.join(args.sample_dir,file)):
+                    for f in os.listdir(os.path.join(args.sample_dir,file)): 
+                        if f.endswith('.npy'): 
+                            npy_files.append(os.path.join(args.sample_dir,file,f))
+            else: 
+                # find all npy files in sample_dir but not its subdirectories
+                if file.endswith('.npy'):
+                    npy_files.append(file)
 
     # random permute
     npy_files = np.random.permutation(npy_files)
@@ -118,6 +117,7 @@ if __name__ == '__main__':
         if args.data_rep == 'mdm':
             motion = np.random.permutation(motion)
 
+        print(motion.shape)
 
         # import polyscope as ps
         # ps.init()

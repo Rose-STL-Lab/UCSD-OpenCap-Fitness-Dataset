@@ -30,17 +30,19 @@ def get_mcs_session_ids(mcs_score_sheet_file):
 
 	return mcs_sessions
 
-def load_motion(osim_path, osim, mot_file,save_dir='MCS_DATA/RetrievedMotion'):
+def load_motion(osim_path, osim, mot_file,save_dir='MCS_DATA/RetrievedMotion',force_save=False):
 
 	if not mot_file.endswith('.mot'):
 		raise NOT_MOT_FILE_ERROR(f"File:{mot_file} is not a mot file.")
 
 	save_name = os.path.basename(mot_file)
 	save_name = save_name.replace('.mot','') + '_joints.npy'
-	save_name = os.path.join(save_dir, save_name)
+	
+	if save_dir is not None:
+		save_name = os.path.join(save_dir, save_name)
 
 	# Store data if it does not already exist
-	if not os.path.exists(save_name):
+	if not os.path.exists(save_name) or force_save:
 
 		mot = load_mot(osim, mot_file)
 
@@ -91,12 +93,12 @@ def get_multiple_motions_for_mcs_data(args):
 		# The mot file can be provided in 4 ways
 		# 1. Single Mot file. Load the motion and return it.
 		if os.path.isfile(args.mot): 
-			motion = load_motion(osim_path, osim, args.mot,save_dir=save_dir) 
+			motion = load_motion(osim_path, osim, args.mot,save_dir=save_dir, force_save=args.force)
 			subject_retreived_motions[session_id].append(motion)			
 
 		# 2. Single Mot file in the subject path
 		elif os.path.isfile(os.path.join(subject_path,'OpenSimData','Kinematics',args.mot)):
-			motion = load_motion(osim_path, osim, args.mot,save_dir=save_dir)
+			motion = load_motion(osim_path, osim, args.mot,save_dir=save_dir,force_save=args.force)
 			subject_retreived_motions[session_id].append(motion)
 
 		# 3. Directory of containg Mot files
@@ -104,7 +106,7 @@ def get_multiple_motions_for_mcs_data(args):
 			for mot_file in os.listdir(args.mot): 
 				mot_file = os.path.join(args.mot, mot_file)
 				try:
-					motion = load_motion(osim_path, osim, mot_file,save_dir=save_dir)
+					motion = load_motion(osim_path, osim, mot_file,save_dir=save_dir,force_save=args.force)
 					subject_retreived_motions[session_id].append(motion)			
 					
 					# break
@@ -118,7 +120,7 @@ def get_multiple_motions_for_mcs_data(args):
 			for mot_file in os.listdir(os.path.join(subject_path,'OpenSimData','Kinematics',args.mot)):
 				mot_file = osim, os.path.join(subject_path,'OpenSimData','Kinematics',args.mot, mot_file)
 				try:
-					motion = load_motion(osim_path, mot_file,save_dir=save_dir)
+					motion = load_motion(osim_path, mot_file,save_dir=save_dir,force_save=args.force)
 					subject_retreived_motions[session_id].append(motion)			
 					
 				except NOT_MOT_FILE_ERROR as e:
@@ -160,6 +162,8 @@ def parse_database_sync_options():
 	options.add_argument("-d", "--data-dir",default="MCS_DATA", help="Path to the database")
 
 	options.add_argument("-s", "--save", default=None, help="Location to save joint motion information") 
+	options.add_argument('-f', '--force',action='store_true',help="forces a re-run on storing the retreived motion even if npy file containg joit locations data is already present.")  # on/off flag
+
 	# options.add_argument("--source-ip-address", default=bc.NORTH['IP_ADDRESS'], help="Source Ip Address (if files not on local system)") 
 	# options.add_argument("--source-port", default=12700, help="Source's port number to connect") 
 	
