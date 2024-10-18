@@ -25,157 +25,8 @@ class Visualizer:
 		# ps.set_view_projection_mode("orthographic")
 		ps.set_ground_plane_mode('shadow_only')
 
-	# Initialize 3D objects from a sample and set callback for
-	def render_smpl_multi_view_callback(self,sample,video_dir=None):
-		self.update_smpl_multi_view_callback(sample,video_dir=video_dir)
-		ps.set_user_callback(self.callback)
-		ps.show()	
-
-	
-	def update_smpl_multi_view_callback(self,sample,video_dir=None):
-		assert hasattr(sample,'rgb'), "Error loading RGB Data. Don't know the camera details. Cannot render in multiple views"
 
 
-		target = sample.joints_np
-		verts,Jtr,Jtr_offset = sample.smpl()
-
-		verts = verts.cpu().data.numpy()
-		if not hasattr(self,'ps_data'):
-			# Initialize Plot SMPL in polyscope
-			ps.init()
-			self.ps_data = {}
-			self.ps_data['bbox'] = verts.max(axis=(0,1)) - verts.min(axis=(0,1))
-			self.ps_data['object_position'] = sample.joints_np[0,0]
-
-		ps.remove_all_structures()
-		# camera_position = np.array([0,0,3*self.ps_data['bbox'][0]])
-		camera_position = np.array([5*self.ps_data['bbox'][0],0.5*self.ps_data['bbox'][1],0]) + self.ps_data['object_position']
-		look_at_position = np.array([0,0,0]) + self.ps_data['object_position']
-		ps.look_at(camera_position,look_at_position)
-
-
-
-		Jtr = Jtr.cpu().data.numpy() + np.array([0,0,0])*self.ps_data['bbox']
-
-		verts += np.array([0, 0, 0]) * self.ps_data['bbox']
-		# target_joints = target - target[:,7:8,:] + Jtr[:,0:1,:] + np.array([0,0,0])*self.ps_data['bbox']
-		target_joints = target + np.array([0,0,0])*self.ps_data['bbox']
-
-		Jtr_offset = Jtr_offset[:,sample.smpl.index['smpl_index']].cpu().data.numpy() + np.array([0.0,0,0])*self.ps_data['bbox']       
-		# Jtr_offset = Jtr_offset.cpu().data.numpy() + np.array([0,0,0])*self.ps_data['bbox']       
-
-		ps_mesh = ps.register_surface_mesh('mesh',verts[0],sample.smpl.smpl_layer.smpl_data['f'],transparency=0.7)
-		
-
-		target_bone_array = np.array([[i,p] for i,p in enumerate(sample.smpl.index['dataset_parent_array'])])
-		ps_target_skeleton = ps.register_curve_network(f"Target Skeleton",target_joints[0],target_bone_array,color=np.array([0,0,1]),enabled=False)
-
-		smpl_bone_array = np.array([[i,p] for i,p in enumerate(sample.smpl.index['parent_array'])])
-		ps_smpl_skeleton = ps.register_curve_network(f"Smpl Skeleton",Jtr[0],smpl_bone_array,color=np.array([1,0,0]),enabled=False)
-
-		smpl_index = list(sample.smpl.index['smpl_index'].cpu().data.numpy())    
-
-		offset_skeleton_bones = np.array([[x,smpl_index.index(sample.smpl.index['parent_array'][i])] for x,i in enumerate(smpl_index) if sample.smpl.index['parent_array'][i] in smpl_index])
-		ps_offset_skeleton = ps.register_curve_network(f"Offset Skeleton",Jtr_offset[0],offset_skeleton_bones,color=np.array([1,1,0]),enabled=False)
-
-
-		dataset_index = list(sample.smpl.index['dataset_index'].cpu().data.numpy())    		
-		joint_mapping = np.concatenate([target_joints[0,dataset_index],Jtr_offset[0]],axis=0)
-		joint_mapping_edges = np.array([(i,joint_mapping.shape[0]//2+i) for i in range(joint_mapping.shape[0]//2)])
-		ps_joint_mapping = ps.register_curve_network(f"Mapping (target- smpl) joints",joint_mapping,joint_mapping_edges,radius=0.001,color=np.array([0,1,0]),enabled=False)
-
-		ps_cams = []
-		# Set indivdual cameras 
-		for i,camera in enumerate(sample.rgb.cameras): 
-			intrinsics = ps.CameraIntrinsics(fov_vertical_deg=camera['fov_x'], fov_horizontal_deg=camera['fov_y'])
-			# extrinsics = ps.CameraExtrinsics(mat=np.eye(4))
-			extrinsics = ps.CameraExtrinsics(root=camera['position'], look_dir=camera['look_dir'], up_dir=camera['up_dir'])
-			params = ps.CameraParameters(intrinsics, extrinsics)
-			ps_cam = ps.register_camera_view(f"Cam{i}", params)
-			# print("Camera:",params.get_view_mat())
-			ps_cams.append(ps_cam)
-
-
-		ps_biomechnical = ps.register_surface_mesh("Ground Truth (Skeleton)",sample.osim.vertices[0],sample.osim.faces,transparency=1.0,color=np.array([60,150,60])/255,smooth_shade=True,material='wax')
-		ps_biomechnical_joints = ps.register_point_cloud("Ground Truth (Joints)",sample.osim.joints[0],color=np.array([0,0,0]))
-
-		ps_biomechnical_pred = ps.register_surface_mesh("Reconstruction (Skeleton)",sample.osim_pred.vertices[0],sample.osim.faces,transparency=1.0,color=np.array([200,50,50])/255,smooth_shade=True,material='wax')
-		ps_biomechnical_joints_pred = ps.register_point_cloud("Reconstruction (Joints)",sample.osim_pred.joints[0],color=np.array([0,0,0]))
-
-
-		# Create random colors of each segment
-		# colors = np.random.random((sample.segments.shape[0],3))
-		# mesh_colors = np.zeros((verts.shape[0],3))
-		# mesh_colors[:,1] = 0.3 # Default color is light blue
-		# mesh_colors[:,2] = 1 # Default color is light blue
-		# for i,segment in enumerate(sample.segments):
-		# 	mesh_colors[segment[0]:segment[1]] = colors[i:i+1]
-
-
-		# self.ps_data = {
-		# 	"experiment_options": self.exps,
-        #     "experiment_options_selected": self.exps[0],
-
-        #     "category_options": self.categories,
-        #     "category_options_selected": self.categories[1],
-
-        #     "trial": 1,
-		# }
-
-		# self.ps_data = {}
-
-		# Map all polyscope objects to ps_data
-		self.ps_data['ps_mesh'] = ps_mesh
-		self.ps_data['ps_target_skeleton'] = ps_target_skeleton
-		self.ps_data['ps_smpl_skeleton'] = ps_smpl_skeleton
-		self.ps_data['ps_offset_skeleton'] = ps_offset_skeleton
-		self.ps_data['ps_joint_mapping'] = ps_joint_mapping
-		self.ps_data['ps_cams'] = ps_cams
-		self.ps_data['ps_biomechnical'] = ps_biomechnical
-		self.ps_data['ps_biomechnical_joints'] = ps_biomechnical_joints
-
-		self.ps_data['ps_biomechnical_pred'] = ps_biomechnical_pred
-		self.ps_data['ps_biomechnical_joints_pred'] = ps_biomechnical_joints_pred
-
-		# Map all the animation data
-		self.ps_data['verts'] = verts
-		self.ps_data['target_joints'] = target_joints
-		self.ps_data['Jtr'] = Jtr
-		self.ps_data['Jtr_offset'] = Jtr_offset
-		self.ps_data['dataset_index'] = dataset_index
-		self.ps_data['biomechanical'] = sample.osim.vertices
-		self.ps_data['biomechanical_joints'] = sample.osim.joints
-
-		self.ps_data['biomechanical_pred'] = sample.osim_pred.vertices
-		self.ps_data['biomechanical_joints_pred'] = sample.osim_pred.joints
-
-
-		# Map all the rendering information
-		self.ps_data['video_dir'] = video_dir
-		self.ps_data['label'] = sample.label
-		self.ps_data['recordAttempt'] = sample.recordAttempt
-		self.ps_data['fps'] = sample.fps
-
-		# Animation details  
-		self.ps_data['t'] = 0 
-		self.ps_data['T'] = min(verts.shape[0], sample.osim.vertices.shape[0], sample.osim_pred.vertices.shape[0])
-		self.ps_data['is_paused'] = False
-		self.ps_data['ui_text'] = "Enter Instructions here"
-
-
-		self.ps_data['session_options_selected'] = sample.openCapID
-		self.ps_data['session_options'] = [ x.replace("OpenCapData_","") for x in  os.listdir(INPUT_DIR)]
-
-		# Load info about other trial samples.
-		other_session_trials_details = [ os.path.join(os.path.dirname(sample.sample_path), x)  for x in os.listdir(os.path.dirname(sample.sample_path))]
-		other_session_trials_details = [OpenCapDataLoader.get_label(os.path.basename(x)) for x in other_session_trials_details if os.path.isfile(x)]
-		
-		self.ps_data['category_options_selected'] = sample.label 
-		self.ps_data['category_options'] = list(set([x[0] for x in other_session_trials_details]))
-		
-
-		self.ps_data['trial_options_selected'] = sample.recordAttempt_str
-		self.ps_data['trial_options'] = [ x[1] for x in other_session_trials_details if x[0] == self.ps_data['category_options_selected']]
 
 
 
@@ -363,13 +214,6 @@ class Visualizer:
 
 		if(psim.TreeNode("Load other samples")):
 
-
-
-
-
-		
-		
-
 			# psim.TextUnformatted("Load Optimized samples")
 
 			changed = psim.BeginCombo("- Experiement", self.ps_data["session_options_selected"])
@@ -418,6 +262,14 @@ class Visualizer:
 						self.ps_data['trial_options'] = [ x[1] for x in other_session_trials_details if x[0] == self.ps_data['category_options_selected']]
 				psim.EndCombo()
 
+			changed = psim.BeginCombo("- Suggested Samples", self.ps_data["retrieval_options_selected"])
+			if changed:
+				for val in self.ps_data["retrieval_options"]:
+					_, selected = psim.Selectable(val, selected=self.ps_data["retrieval_options_selected"]==val)
+					if selected:
+						self.ps_data["retrieval_options_selected"] = val
+				psim.EndCombo()
+
 
 			
 			if(psim.Button("Load Optimized samples")):
@@ -425,13 +277,171 @@ class Visualizer:
 				sample_path = os.path.join(sample_path, "MarkerData")
 				sample_path = os.path.join(sample_path,f"{self.ps_data['category_options_selected']}{self.ps_data['trial_options_selected']}.trc")
 				sample = load_subject(sample_path)
+
+				retrieval_path = os.path.join(self.ps_data['retrieval_dir'], self.ps_data['retrieval_options_selected'])
+				sample = load_retrived_samples(sample,retrieval_path)
 				self.update_smpl_multi_view_callback(sample)
 			psim.TreePop()
 
 
 		# psim.End()
 
+	
+	def update_smpl_multi_view_callback(self,sample,video_dir=None):
+		assert hasattr(sample,'rgb'), "Error loading RGB Data. Don't know the camera details. Cannot render in multiple views"
 
+
+		target = sample.joints_np
+		verts,Jtr,Jtr_offset = sample.smpl()
+
+		verts = verts.cpu().data.numpy()
+		if not hasattr(self,'ps_data'):
+			# Initialize Plot SMPL in polyscope
+			ps.init()
+			self.ps_data = {}
+			self.ps_data['bbox'] = verts.max(axis=(0,1)) - verts.min(axis=(0,1))
+			self.ps_data['object_position'] = sample.joints_np[0,0]
+
+		ps.remove_all_structures()
+		# camera_position = np.array([0,0,3*self.ps_data['bbox'][0]])
+		camera_position = np.array([5*self.ps_data['bbox'][0],0.5*self.ps_data['bbox'][1],0]) + self.ps_data['object_position']
+		look_at_position = np.array([0,0,0]) + self.ps_data['object_position']
+		ps.look_at(camera_position,look_at_position)
+
+
+
+		Jtr = Jtr.cpu().data.numpy() + np.array([0,0,0])*self.ps_data['bbox']
+
+		verts += np.array([0, 0, 0]) * self.ps_data['bbox']
+		# target_joints = target - target[:,7:8,:] + Jtr[:,0:1,:] + np.array([0,0,0])*self.ps_data['bbox']
+		target_joints = target + np.array([0,0,0])*self.ps_data['bbox']
+
+		Jtr_offset = Jtr_offset[:,sample.smpl.index['smpl_index']].cpu().data.numpy() + np.array([0.0,0,0])*self.ps_data['bbox']       
+		# Jtr_offset = Jtr_offset.cpu().data.numpy() + np.array([0,0,0])*self.ps_data['bbox']       
+
+		ps_mesh = ps.register_surface_mesh('mesh',verts[0],sample.smpl.smpl_layer.smpl_data['f'],transparency=0.7)
+		
+
+		target_bone_array = np.array([[i,p] for i,p in enumerate(sample.smpl.index['dataset_parent_array'])])
+		ps_target_skeleton = ps.register_curve_network(f"Target Skeleton",target_joints[0],target_bone_array,color=np.array([0,0,1]),enabled=False)
+
+		smpl_bone_array = np.array([[i,p] for i,p in enumerate(sample.smpl.index['parent_array'])])
+		ps_smpl_skeleton = ps.register_curve_network(f"Smpl Skeleton",Jtr[0],smpl_bone_array,color=np.array([1,0,0]),enabled=False)
+
+		smpl_index = list(sample.smpl.index['smpl_index'].cpu().data.numpy())    
+
+		offset_skeleton_bones = np.array([[x,smpl_index.index(sample.smpl.index['parent_array'][i])] for x,i in enumerate(smpl_index) if sample.smpl.index['parent_array'][i] in smpl_index])
+		ps_offset_skeleton = ps.register_curve_network(f"Offset Skeleton",Jtr_offset[0],offset_skeleton_bones,color=np.array([1,1,0]),enabled=False)
+
+
+		dataset_index = list(sample.smpl.index['dataset_index'].cpu().data.numpy())    		
+		joint_mapping = np.concatenate([target_joints[0,dataset_index],Jtr_offset[0]],axis=0)
+		joint_mapping_edges = np.array([(i,joint_mapping.shape[0]//2+i) for i in range(joint_mapping.shape[0]//2)])
+		ps_joint_mapping = ps.register_curve_network(f"Mapping (target- smpl) joints",joint_mapping,joint_mapping_edges,radius=0.001,color=np.array([0,1,0]),enabled=False)
+
+		ps_cams = []
+		# Set indivdual cameras 
+		for i,camera in enumerate(sample.rgb.cameras): 
+			intrinsics = ps.CameraIntrinsics(fov_vertical_deg=camera['fov_x'], fov_horizontal_deg=camera['fov_y'])
+			# extrinsics = ps.CameraExtrinsics(mat=np.eye(4))
+			extrinsics = ps.CameraExtrinsics(root=camera['position'], look_dir=camera['look_dir'], up_dir=camera['up_dir'])
+			params = ps.CameraParameters(intrinsics, extrinsics)
+			ps_cam = ps.register_camera_view(f"Cam{i}", params)
+			# print("Camera:",params.get_view_mat())
+			ps_cams.append(ps_cam)
+
+
+		ps_biomechnical = ps.register_surface_mesh("Ground Truth (Skeleton)",sample.osim.vertices[0],sample.osim.faces,transparency=1.0,color=np.array([60,150,60])/255,smooth_shade=True,material='wax')
+		ps_biomechnical_joints = ps.register_point_cloud("Ground Truth (Joints)",sample.osim.joints[0],color=np.array([0,0,0]))
+
+		ps_biomechnical_pred = ps.register_surface_mesh("Reconstruction (Skeleton)",sample.osim_pred.vertices[0],sample.osim.faces,transparency=1.0,color=np.array([200,50,50])/255,smooth_shade=True,material='wax')
+		ps_biomechnical_joints_pred = ps.register_point_cloud("Reconstruction (Joints)",sample.osim_pred.joints[0],color=np.array([0,0,0]))
+
+
+		# Create random colors of each segment
+		# colors = np.random.random((sample.segments.shape[0],3))
+		# mesh_colors = np.zeros((verts.shape[0],3))
+		# mesh_colors[:,1] = 0.3 # Default color is light blue
+		# mesh_colors[:,2] = 1 # Default color is light blue
+		# for i,segment in enumerate(sample.segments):
+		# 	mesh_colors[segment[0]:segment[1]] = colors[i:i+1]
+
+
+		# self.ps_data = {
+		# 	"experiment_options": self.exps,
+        #     "experiment_options_selected": self.exps[0],
+
+        #     "category_options": self.categories,
+        #     "category_options_selected": self.categories[1],
+
+        #     "trial": 1,
+		# }
+
+		# self.ps_data = {}
+
+		# Map all polyscope objects to ps_data
+		self.ps_data['ps_mesh'] = ps_mesh
+		self.ps_data['ps_target_skeleton'] = ps_target_skeleton
+		self.ps_data['ps_smpl_skeleton'] = ps_smpl_skeleton
+		self.ps_data['ps_offset_skeleton'] = ps_offset_skeleton
+		self.ps_data['ps_joint_mapping'] = ps_joint_mapping
+		self.ps_data['ps_cams'] = ps_cams
+		self.ps_data['ps_biomechnical'] = ps_biomechnical
+		self.ps_data['ps_biomechnical_joints'] = ps_biomechnical_joints
+
+		self.ps_data['ps_biomechnical_pred'] = ps_biomechnical_pred
+		self.ps_data['ps_biomechnical_joints_pred'] = ps_biomechnical_joints_pred
+
+		# Map all the animation data
+		self.ps_data['verts'] = verts
+		self.ps_data['target_joints'] = target_joints
+		self.ps_data['Jtr'] = Jtr
+		self.ps_data['Jtr_offset'] = Jtr_offset
+		self.ps_data['dataset_index'] = dataset_index
+		self.ps_data['biomechanical'] = sample.osim.vertices
+		self.ps_data['biomechanical_joints'] = sample.osim.joints
+
+		self.ps_data['biomechanical_pred'] = sample.osim_pred.vertices
+		self.ps_data['biomechanical_joints_pred'] = sample.osim_pred.joints
+
+
+		# Map all the rendering information
+		self.ps_data['video_dir'] = video_dir
+		self.ps_data['label'] = sample.label
+		self.ps_data['recordAttempt'] = sample.recordAttempt
+		self.ps_data['fps'] = sample.fps
+
+		# Animation details  
+		self.ps_data['t'] = 0 
+		self.ps_data['T'] = min(verts.shape[0], sample.osim.vertices.shape[0], sample.osim_pred.vertices.shape[0])
+		self.ps_data['is_paused'] = False
+		self.ps_data['ui_text'] = "Enter Instructions here"
+
+
+		self.ps_data['session_options_selected'] = sample.openCapID
+		self.ps_data['session_options'] = [ x.replace("OpenCapData_","") for x in  os.listdir(INPUT_DIR)]
+
+		# Load info about other trial samples.
+		other_session_trials_details = [ os.path.join(os.path.dirname(sample.sample_path), x)  for x in os.listdir(os.path.dirname(sample.sample_path))]
+		other_session_trials_details = [OpenCapDataLoader.get_label(os.path.basename(x)) for x in other_session_trials_details if os.path.isfile(x)]
+		
+		self.ps_data['category_options_selected'] = sample.label 
+		self.ps_data['category_options'] = list(set([x[0] for x in other_session_trials_details]))
+		
+
+		self.ps_data['trial_options_selected'] = sample.recordAttempt_str
+		self.ps_data['trial_options'] = [ x[1] for x in other_session_trials_details if x[0] == self.ps_data['category_options_selected']]
+
+		self.ps_data['retrieval_options_selected'] = os.path.basename(sample.osim_pred_file)
+		self.ps_data['retrieval_dir'] = os.path.dirname(sample.osim_pred_file)
+		self.ps_data['retrieval_options'] = os.listdir(self.ps_data['retrieval_dir'])  
+		
+
+	# Initialize 3D objects from a sample and set callback for
+	def render_smpl_multi_view_callback(self,sample,video_dir=None):
+		self.update_smpl_multi_view_callback(sample,video_dir=video_dir)
+		ps.set_user_callback(self.callback)
+		ps.show()	
 
 # Load file and render skeleton for each video
 def render_dataset(sample_path=None):
@@ -548,7 +558,7 @@ def load_retrived_samples(sample, retrieval_path):
 	print("KNEE Left:",np.rad2deg(sample.osim_pred.motion[::10,10]))
 	print("TIME:",sample.osim_pred.motion[::10,0])
 	sample.osim_pred.vertices[:,:,2] -= 1	
-	
+	sample.osim_pred_file = retrieval_path
 
 	return sample
 

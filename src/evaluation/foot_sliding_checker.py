@@ -52,11 +52,17 @@ def load_data(args,npy_file):
             motion = motion['motion'][:, :, :,:motion['lengths'][0]].transpose((0,3,1,2))
     
     elif args.data_rep == 'mot' or args.data_rep == 'osim': 
-        assert os.path.abspath(args.sample_dir) == os.path.abspath(args.sample_dir), f"No need for npy_files file:{args.sample_dir}"
-        motion = np.load(args.sample_dir)
-        S, R, T, J, D =  motion.shape
+        if args.sample_dir.endswith('.npy'):
+            motion = np.load(args.sample_dir)
+            S, R, T, J, D =  motion.shape
 
-        motion = motion.reshape((S*R, T, J,D))
+            motion = motion.reshape((S*R, T, J,D))
+        
+        elif npy_file.endswith('.npy'):
+            motion = np.load(npy_file)
+            motion = motion[None] # Add batch dimension
+        else:
+            raise NotImplementedError("npy_file or sample_dir should be npy files")
 
     else:
         raise NotImplementedError("Data representation not implemented. Please choose from 'xyz', 'humanml' or 'brax_ik'")
@@ -71,9 +77,14 @@ if __name__ == '__main__':
     parser.add_argument('--framerate', type=float, default=60)
     args = parser.parse_args()
 
-    
+
     if os.path.isfile(args.sample_dir): 
-        npy_files = [args.sample_dir]
+        if args.sample_dir.endswith('.npy'): # If npy file, mainly constains joint centers
+            npy_files = [args.sample_dir]
+        elif args.sample_dir.endswith('.txt'): # List of files to run foot sliding checker
+            with open(args.sample_dir, 'r') as f: 
+                npy_files = f.readlines()
+                npy_files = [x.strip() for x in npy_files]
     else: 
         npy_files = []
         for file in os.listdir(args.sample_dir):
@@ -107,7 +118,7 @@ if __name__ == '__main__':
     # plt.hist(min_height_list,bins=100)
     # plt.show()
 
-    y_translation = -np.median(min_height_list)
+    y_translation = -np.median(min_height_list) # Trivial estimation of the ground height
     # y_translation = 0
 
     print(f"Ground height:",y_translation, "calculated as the median of the min height across all samples")
@@ -117,8 +128,7 @@ if __name__ == '__main__':
         if args.data_rep == 'mdm':
             motion = np.random.permutation(motion)
 
-        print(motion.shape)
-
+        # print(motion.shape)
         # import polyscope as ps
         # ps.init()
         # ps.register_point_cloud("motion",motion[0,0])
@@ -155,6 +165,8 @@ if __name__ == '__main__':
         loss_fl.append(fl[:, :t].view(-1))
         loss_sk.append(sk.view(-1))
         metr_act.append(acc[:, :t].view(-1))
+
+        # print(pn[:, :t]) 
 
         
     loss_pn = torch.cat(loss_pn, dim=0)
