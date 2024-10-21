@@ -136,8 +136,8 @@ if __name__ == '__main__':
         # ps.show()
 
         # y_translation = 0.0
-        motion = torch.from_numpy(motion).float()
-        min_height, idx = motion[..., 1].min(dim=-1)
+        motion = torch.from_numpy(motion).float() # TxJx3
+        min_height, idx = motion[..., 1].min(dim=-1) # TxJx3 -> TxJ -> T
         # print(min_height,idx,motion[..., 1].shape)
         min_height = min_height + y_translation
         pn = -torch.minimum(min_height, torch.zeros_like(min_height))  # penetration

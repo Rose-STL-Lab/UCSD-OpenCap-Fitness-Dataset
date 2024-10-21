@@ -93,7 +93,7 @@ def get_multiple_motions_for_mcs_data(args):
 	# For every MCS subject: perform forward kinematics and get the joint motion
 	for session_index, session_id in enumerate(session_ids):
 
-		subject_path = os.path.join(args.data_dir, 'DATA',session_id) 
+		subject_path = os.path.join(args.data_dir, 'Data',session_id) 
 		osim_path = os.path.join(subject_path,'OpenSimData','Model', 'LaiArnoldModified2017_poly_withArms_weldHand_scaled.osim')
 
 		assert os.path.exists(osim_path), f"Osim file:{osim_path} does not exist"
@@ -103,7 +103,7 @@ def get_multiple_motions_for_mcs_data(args):
 		subject_retreived_motions[session_id] = []
 
 		# Save location 
-		save_dir = os.path.join(args.data_dir, 'DATA',session_id, 'OpenSimData','RetrievedMotion')
+		save_dir = os.path.join(args.data_dir, 'Data',session_id, 'OpenSimData','RetrievedMotion')
 		os.makedirs(save_dir, exist_ok=True)
 
 		
@@ -140,7 +140,7 @@ def get_multiple_motions_for_mcs_data(args):
 			
 
 			################ Specific rules for loading kinematics data ##############################
-			if args.mot == 'Kinematics':
+			if 'Kinematics' in args.mot:
 				for mot_file in os.listdir(os.path.join(subject_path,'OpenSimData',args.mot)):
 					if not mot_file.endswith('.mot'): continue
 

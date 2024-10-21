@@ -40,13 +40,24 @@ def load_osim(osim_path, geometry_path, ignore_geometry=False):
     if geometry_path is not None: 
         # Check that there is a Geometry folder at the same level as the osim file
         geometry_path = os.path.join(DATA_DIR, 'OpenCap_LaiArnoldModified2017_Geometry') 
-    
+        
+
+
     if os.path.dirname(osim_path) != os.path.dirname(geometry_path):        
         # Check that there is a Geometry folder at the same level as the osim file. Otherwise nimble physics cannot import it. 
         os.makedirs(os.path.join(os.path.dirname(osim_path),'Geometry'), exist_ok=True)
         for file in os.listdir(geometry_path):
-            if os.path.exists(os.path.join(os.path.dirname(osim_path),'Geometry',file)): continue
-            os.symlink(os.path.join(geometry_path, file), os.path.join(os.path.dirname(osim_path), 'Geometry', file))
+            check_path = os.path.join(os.path.dirname(osim_path),'Geometry',file)
+            check_path = os.path.abspath(check_path)
+            
+            if os.path.exists(check_path): continue # If symlink for a particular joint already exist then don't create a 
+            
+            # File data does not exist, but the filename exists, which is referecing to some random unrecongnized location  
+            if os.path.islink(check_path): 
+                os.unlink(check_path)
+
+
+            os.symlink(os.path.join(geometry_path, file), check_path)
     
 
         
