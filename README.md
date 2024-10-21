@@ -296,3 +296,62 @@ Additional information about the model can be found on the links below:
 Relevant papers: 
 
 https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1011462
+
+
+## Developer Utils
+
+### Syncthing 
+
+- To sync database across different. Syncthing also requires a DEVICE-ID (created during installation) to transfer files between servers. 
+
+- Only drawback is that it requires GUI to access both your system and server. 
+
+- Installation instructions: [here](https://docs.syncthing.net/intro/getting-started.html)
+
+
+
+#### Commands for the remote server
+
+```
+syncthing
+```
+
+port-forwarding to access gui of the remote server
+
+```
+ssh -L 9000:127.0.0.1:8384 ubuntu@north.ucsd.edu -i ~/Desktop/panini
+```
+
+
+To sync a folder. First `Add folder` on the and add the name and path to the folder to sync 
+Then 
+1. open the folder box 
+2. click `Edit`
+3. Go to tab `Sharing`
+4. Select server to sync with 
+
+
+## Installing polyscope on the remote server
+
+
+Polyscope has a lot of trouble installing on the remote server. But by installing the right packages we can make it work. 
+
+1. Use `ssh -X` to login 
+2. Set `export DISPLAY=:99.0`
+3. Fix for error: 
+
+    ```
+        libGL error: MESA-LOADER: failed to open swrast: /home/ubuntu/.conda/envs/T2M-GPT/bin/../lib/libstdc++.so.6: version `GLIBCXX_3.4.29' not found (required by /usr/lib/dri/swrast_dri.so) (search paths /usr/lib/x86_64-linux-gnu/dri:\$${ORIGIN}/dri:/usr/lib/dri, suffix _dri)
+        libGL error: failed to load driver: swrast
+        GLFW emitted error: GLX: Failed to create context: GLXBadFBConfig
+    ```
+
+    ```
+        rm /home/ubuntu/.conda/envs/T2M-GPT/bin/../lib/libstdc++.so.6
+        ln -s /usr/lib/x86_64-linux-gnu/libstdc++.so.6  /home/ubuntu/.conda/envs/T2M-GPT/bin/../lib/libstdc++.so.6 
+    ```
+4. Fix for error: 
+    ```
+        DISPLAY not found
+    ```
+    
