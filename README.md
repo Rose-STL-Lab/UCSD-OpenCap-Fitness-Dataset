@@ -83,10 +83,11 @@ src
 
 Note:- Each python file can be called from any directory. 
 ```
-// All commands should be work
+// All commands that should work only any system
 python retarget2smpl.py 
 python src/retarget2smpl.py
 python UCSD-OpenCap-Fitness-Dataset/src/retarget2smpl.py  
+python src/opencap_reconstruction_render.py <subject-path>  <mot-path>  <save-path>
 ```
 
 
@@ -96,7 +97,6 @@ python UCSD-OpenCap-Fitness-Dataset/src/retarget2smpl.py
     ```
         git clone --recursive https://github.com/Rose-STL-Lab/UCSD-OpenCap-Fitness-Dataset.git
         cd UCSD-OpenCap-Fitness-Dataset
-        export UCSD_OPENCAP_DATASET_DIR=$PWD
     ```
 
 - Creating environment
@@ -106,46 +106,77 @@ python UCSD-OpenCap-Fitness-Dataset/src/retarget2smpl.py
 
     ```
 
+- Pip packages
+    ```
+    pip install polyscope opensim ffmpeg glfw 
 
-## 1. Visualization 
-
-### Installation
-```
-pip install polyscope opensim ffmpeg
-```
+    ```
 
 - Raise an issue if you are having trouble installing any of the above packages
 
+## 1. Visualization 
 
 <details>
 <summary>Polyscope installation details </summary>
+
 - Linux
 
 ```
 ```
+
+- Windows 
+```
+```
+
+- Remote Server / North Servr / Linux Containers 
+
+
+    Polyscope has a lot of trouble installing on the remote server. But by installing the right packages we can make it work. 
+    3. Fix for error: 
+
+        ```
+            libGL error: MESA-LOADER: failed to open swrast: /home/ubuntu/.conda/envs/T2M-GPT/bin/../lib/libstdc++.so.6: version `GLIBCXX_3.4.29' not found (required by /usr/lib/dri/swrast_dri.so) (search paths /usr/lib/x86_64-linux-gnu/dri:\$${ORIGIN}/dri:/usr/lib/dri, suffix _dri)
+            libGL error: failed to load driver: swrast
+            GLFW emitted error: GLX: Failed to create context: GLXBadFBConfig
+        ```
+
+        ```
+            rm /home/ubuntu/.conda/envs/T2M-GPT/bin/../lib/libstdc++.so.6
+            ln -s /usr/lib/x86_64-linux-gnu/libstdc++.so.6  /home/ubuntu/.conda/envs/T2M-GPT/bin/../lib/libstdc++.so.6 
+        ```
+
+    4. Fix for `GLFW emitted error: The GLFW library is not initialized`
+        ```
+
+        ```
+
+    4. Fix for error: 
+        ```
+            DISPLAY not found
+        ```
+
+
 </details>
-
-
-<details>
-<summary>OpenSim installation details </summary>
- Step:1 - https://github.com/opensim-org/opensim-core/wiki/Build-Instructions#configuration-1
- Step 2 - https://simtk-confluence.stanford.edu:8443/display/OpenSim/Scripting+in+Python
-</details>
-
 
 
 ###  Rendering 
 Renders a video of the skeleton video using polyscope 
 ```
-python3 renderer.py # For complete dataset
+python3 python src/opencap_reconstruction_render.py # For complete dataset
 ```
 Or 
 ```
-python3 renderer.py <sample-filepath> # Specific trc file
+python3 python src/opencap_reconstruction_render.py <subject-path>  <mot-path>  <save-path> # Specific trc file
 ```
 
-`<sample-filepath>` is the path to the trc file containing the xyz co-ordinates of each joint to plot
 
+<details>
+<summary> Running on a remote server ? </summary>
+
+- Use `ssh -X` to login 
+- Set `export DISPLAY=:99.0`
+
+</details>
 
 ## 2. Retargetting  
 To retarget .trc file to SMPL format  
@@ -230,10 +261,12 @@ python src/temporal_segmentation.py
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1V1c-MYPiTuyefkh-6mNw8y9M1BYVCnnR?usp=sharing)
 
+#### To run locally 
 
-To run locally 
+<details>
+<summary>OpenCap installation details </summary>
 
-### Installation
+Multiple modules need to be installed  
 
 
 - OpenSim
@@ -242,30 +275,37 @@ To run locally
     conda install -c opensim-org opensim
     ```
 
-
 - OpenCap-processing
     
     ```
-    git clone 
+    git clone https://github.com/stanfordnmbl/opencap-processing.git
     ```
 
 - CasADi
 
     ```
-        cd $UCSD_OPENCAP_DATASET_DIR/deps
-        git clone --recursive https://github.com/casadi/casadi.git casadi
-        cd casadi
-        git checkout 3.5.5
-        mkdir -p build
-        cp build
-        
-        apt install swig
-        cmake -DWITH_PYTHON=ON -DWITH_PYTHON3=ON ..
-        make
-        make install
-        cd $UCSD_OPENCAP_DATASET_DIR/deps/opencap-processing
+    cd $UCSD_OPENCAP_DATASET_DIR/deps
+    git clone --recursive https://github.com/casadi/casadi.git casadi
+    cd casadi
+    git checkout 3.5.5
+    mkdir -p build
+    cp build
+    
+    apt install swig
+    cmake -DWITH_PYTHON=ON -DWITH_PYTHON3=ON ..
+    make
+    make install
+    cd $UCSD_OPENCAP_DATASET_DIR/deps/opencap-processing
     ```
 
+- References:
+
+    - Step:1 - https://github.com/opensim-org/opensim-core/wiki/Build-Instructions#configuration-1
+
+    - Step 2 - https://simtk-confluence.stanford.edu:8443/display/OpenSim/Scripting+in+Python
+
+
+</details>
 
 
 
@@ -287,12 +327,6 @@ Additional information about the model can be found on the links below:
 - https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5989715/
 - https://github.com/opensim-org/opensim-models
 
-<details>
-<summary>OpenSim installation details </summary>
- Step:1 - https://github.com/opensim-org/opensim-core/wiki/Build-Instructions#configuration-1
- Step 2 - https://simtk-confluence.stanford.edu:8443/display/OpenSim/Scripting+in+Python
-</details>
-
 Relevant papers: 
 
 https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1011462
@@ -302,7 +336,7 @@ https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1011462
 
 ### Syncthing 
 
-- To sync database across different. Syncthing also requires a DEVICE-ID (created during installation) to transfer files between servers. 
+- To sync database across different systems. Syncthing uses a DEVICE-ID (created during installation) to transfer files between servers. 
 
 - Only drawback is that it requires GUI to access both your system and server. 
 
@@ -331,27 +365,4 @@ Then
 4. Select server to sync with 
 
 
-## Installing polyscope on the remote server
-
-
-Polyscope has a lot of trouble installing on the remote server. But by installing the right packages we can make it work. 
-
-1. Use `ssh -X` to login 
-2. Set `export DISPLAY=:99.0`
-3. Fix for error: 
-
-    ```
-        libGL error: MESA-LOADER: failed to open swrast: /home/ubuntu/.conda/envs/T2M-GPT/bin/../lib/libstdc++.so.6: version `GLIBCXX_3.4.29' not found (required by /usr/lib/dri/swrast_dri.so) (search paths /usr/lib/x86_64-linux-gnu/dri:\$${ORIGIN}/dri:/usr/lib/dri, suffix _dri)
-        libGL error: failed to load driver: swrast
-        GLFW emitted error: GLX: Failed to create context: GLXBadFBConfig
-    ```
-
-    ```
-        rm /home/ubuntu/.conda/envs/T2M-GPT/bin/../lib/libstdc++.so.6
-        ln -s /usr/lib/x86_64-linux-gnu/libstdc++.so.6  /home/ubuntu/.conda/envs/T2M-GPT/bin/../lib/libstdc++.so.6 
-    ```
-4. Fix for error: 
-    ```
-        DISPLAY not found
-    ```
     
