@@ -35,12 +35,14 @@ sys.path.extend([HOME_DIR,RABIT_DIR,STYLEGAN_DIR])
 ############################# FOLDER PATHS #######################################################
 if os.path.isdir(os.path.join(HOME_DIR,'MCS_DATA')): 
     DATA_DIR = os.path.join(HOME_DIR,'MCS_DATA')
+elif os.path.isdir(os.path.join(HOME_DIR, '..', 'MCS_DATA')):
+    DATA_DIR = os.path.join(HOME_DIR, '..', 'MCS_DATA')
 elif os.path.isdir(os.path.join(HOME_DIR,'data')): 
     DATA_DIR = os.path.join(HOME_DIR,'data')
 else: 
     raise FileNotFoundError("Unable to find directory containing the MCS dataset")
 
-INPUT_DIR = os.path.join(DATA_DIR,'OpenSim') # Path containing all the training data (currently using xyz)
+INPUT_DIR = os.path.join(DATA_DIR,'Data') # Path containing all the training data (currently using xyz)
 SMPL_DIR = os.path.join(DATA_DIR,'SMPL')
 RENDER_DIR = os.path.join(DATA_DIR,'rendered_videos')
 LOG_DIR = os.path.join(DATA_DIR,'logs')

@@ -26,87 +26,6 @@ class Visualizer:
 		ps.set_ground_plane_mode('shadow_only')
 
 
-
-
-
-
-
-	def callback_render(self):
-
-		verts = self.ps_data['verts']
-		ps_mesh = self.ps_data['ps_mesh']
-		target_joints = self.ps_data['target_joints']
-		Jtr = self.ps_data['Jtr']
-		Jtr_offset = self.ps_data['Jtr_offset']
-		biomechanical = self.ps_data['biomechanical']
-		biomechanical_joints = self.ps_data['biomechanical_joints']
-
-		biomechanical_pred = self.ps_data['biomechanical_pred']
-		biomechanical_joints_pred = self.ps_data['biomechanical_joints_pred']
-
-		ps_target_skeleton = self.ps_data['ps_target_skeleton']
-		ps_smpl_skeleton = self.ps_data['ps_smpl_skeleton']
-		ps_offset_skeleton = self.ps_data['ps_offset_skeleton']
-		ps_joint_mapping = self.ps_data['ps_joint_mapping']	
-
-		ps_biomechnical = self.ps_data['ps_biomechnical']
-		ps_biomechnical_joints = self.ps_data['ps_biomechnical_joints']
-
-		ps_biomechnical_pred = self.ps_data['ps_biomechnical_pred']
-		ps_biomechnical_joints_pred = self.ps_data['ps_biomechnical_joints_pred']
-
-		dataset_index = self.ps_data['dataset_index']
-
-
-
-
-		video_dir = self.ps_data['video_dir']
-
-		if video_dir is None: 
-			ps.warning("Location to render not specefied. Setting to <current working directory>/render as default")
-			video_dir = os.path.join(os.getcwd(),"render")
-
-		os.makedirs(video_dir,exist_ok=True)
-		os.makedirs(os.path.join(video_dir,"images"),exist_ok=True)
-		os.makedirs(os.path.join(video_dir,"video"),exist_ok=True)
-
-
-
-		print(f'Rendering images:')
-		for i in tqdm(range(self.ps_data['T'])):
-			
-			ps_mesh.update_vertex_positions(verts[i])
-			# ps_mesh.set_color(mesh_colors[i])
-
-			ps_target_skeleton.update_node_positions(target_joints[i])
-			ps_smpl_skeleton.update_node_positions(Jtr[i])
-			ps_offset_skeleton.update_node_positions(Jtr_offset[i])
-			ps_joint_mapping.update_node_positions(np.concatenate([target_joints[i,dataset_index],Jtr_offset[i]],axis=0))
-
-			ps_biomechnical.update_vertex_positions(biomechanical[i])
-			ps_biomechnical_joints.update_point_positions(biomechanical_joints[i])
-
-			ps_biomechnical_pred.update_vertex_positions(biomechanical_pred[i])
-			ps_biomechnical_joints_pred.update_point_positions(biomechanical_joints_pred[i])
-
-			image_path = os.path.join(video_dir,"images",f"smpl_{i}.png")
-			# print(f"Saving plot to :{image_path}")	
-			ps.set_screenshot_extension(".png")
-			ps.screenshot(image_path,transparent_bg=False)
-			
-
-		image_path = os.path.join(video_dir,"images",f"smpl_\%d.png")
-		video_path = os.path.join(video_dir,"video",f"{self.ps_data['label']}_{self.ps_data['recordAttempt']}_smpl.mp4")
-		video_path = os.path.abspath(video_path)
-		palette_path = os.path.join(video_dir,"video",f"smpl.png")
-		frame_rate = self.ps_data['fps']
-		os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -vf palettegen {palette_path}")
-		os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse 	 {video_path}")	
-		# os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse {video_path.replace('mp4','gif')}")	
-
-		print(f"Running Command:",f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse {video_path}")
-
-
 	def read_display_size(self):
 		polyscope_ini_path = os.path.join(os.getcwd(),'.polyscope.ini')
 		if not os.path.exists(polyscope_ini_path):
@@ -295,8 +214,10 @@ class Visualizer:
 		verts,Jtr,Jtr_offset = sample.smpl()
 
 		verts = verts.cpu().data.numpy()
+		
+		# Initialize ps_data for polyscope
 		if not hasattr(self,'ps_data'):
-			# Initialize Plot SMPL in polyscope
+			
 			ps.init()
 			self.ps_data = {}
 			self.ps_data['bbox'] = verts.max(axis=(0,1)) - verts.min(axis=(0,1))
@@ -436,6 +357,78 @@ class Visualizer:
 		self.ps_data['retrieval_dir'] = os.path.dirname(sample.osim_pred_file)
 		self.ps_data['retrieval_options'] = os.listdir(self.ps_data['retrieval_dir'])  
 		
+	def callback_render(self):
+
+		verts = self.ps_data['verts']
+		ps_mesh = self.ps_data['ps_mesh']
+		target_joints = self.ps_data['target_joints']
+		Jtr = self.ps_data['Jtr']
+		Jtr_offset = self.ps_data['Jtr_offset']
+		biomechanical = self.ps_data['biomechanical']
+		biomechanical_joints = self.ps_data['biomechanical_joints']
+
+		biomechanical_pred = self.ps_data['biomechanical_pred']
+		biomechanical_joints_pred = self.ps_data['biomechanical_joints_pred']
+
+		ps_target_skeleton = self.ps_data['ps_target_skeleton']
+		ps_smpl_skeleton = self.ps_data['ps_smpl_skeleton']
+		ps_offset_skeleton = self.ps_data['ps_offset_skeleton']
+		ps_joint_mapping = self.ps_data['ps_joint_mapping']	
+
+		ps_biomechnical = self.ps_data['ps_biomechnical']
+		ps_biomechnical_joints = self.ps_data['ps_biomechnical_joints']
+
+		ps_biomechnical_pred = self.ps_data['ps_biomechnical_pred']
+		ps_biomechnical_joints_pred = self.ps_data['ps_biomechnical_joints_pred']
+
+		dataset_index = self.ps_data['dataset_index']
+
+		video_dir = self.ps_data['video_dir']
+
+		if video_dir is None: 
+			ps.warning("Location to render not specefied. Setting to <current working directory>/render as default")
+			video_dir = os.path.join(os.getcwd(),"render")
+
+		os.makedirs(video_dir,exist_ok=True)
+		os.makedirs(os.path.join(video_dir,"images"),exist_ok=True)
+		os.makedirs(os.path.join(video_dir,"video"),exist_ok=True)
+
+
+
+		print(f'Rendering images:')
+		for i in tqdm(range(self.ps_data['T'])):
+			
+			ps_mesh.update_vertex_positions(verts[i])
+			# ps_mesh.set_color(mesh_colors[i])
+
+			ps_target_skeleton.update_node_positions(target_joints[i])
+			ps_smpl_skeleton.update_node_positions(Jtr[i])
+			ps_offset_skeleton.update_node_positions(Jtr_offset[i])
+			ps_joint_mapping.update_node_positions(np.concatenate([target_joints[i,dataset_index],Jtr_offset[i]],axis=0))
+
+			ps_biomechnical.update_vertex_positions(biomechanical[i])
+			ps_biomechnical_joints.update_point_positions(biomechanical_joints[i])
+
+			ps_biomechnical_pred.update_vertex_positions(biomechanical_pred[i])
+			ps_biomechnical_joints_pred.update_point_positions(biomechanical_joints_pred[i])
+
+			image_path = os.path.join(video_dir,"images",f"smpl_{i}.png")
+			# print(f"Saving plot to :{image_path}")	
+			ps.set_screenshot_extension(".png")
+			ps.screenshot(image_path,transparent_bg=False)
+			
+
+		image_path = os.path.join(video_dir,"images",f"smpl_\%d.png")
+		video_path = os.path.join(video_dir,"video",self.ps_data['retrieval_options_selected'].replace('.mot','.mp4'))
+		video_path = os.path.abspath(video_path)
+		palette_path = os.path.join(video_dir,"video",f"smpl.png")
+		frame_rate = self.ps_data['fps']
+		os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -vf palettegen {palette_path}")
+		os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse 	 {video_path}")	
+		# os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse {video_path.replace('mp4','gif')}")	
+
+		print(f"Running Command:",f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse {video_path}")
+
 
 	# Initialize 3D objects from a sample and set callback for
 	def render_smpl_multi_view_callback(self,sample,video_dir=None):
@@ -443,21 +436,13 @@ class Visualizer:
 		ps.set_user_callback(self.callback)
 		ps.show()	
 
-# Load file and render skeleton for each video
-def render_dataset(sample_path=None):
-	video_dir = RENDER_DIR
-	
-	vis = Visualizer()
-	
-	for subject in os.listdir(INPUT_DIR):
-		for trial_path in os.listdir(os.path.join(INPUT_DIR,subject,'MarkerData')):
-			trial_path = os.path.join(INPUT_DIR,subject,'MarkerData',trial_path)
-			render_smpl(trial_path, sample_path, vis,video_dir=video_dir)
+
 
 def render_smpl(sample_path,retrieval_path, vis,video_dir=None): 
 	"""
 		Render dataset samples 
 			
+
 		@params
 			sample_path: Filepath of input
 			video_dir: Folder to store Render results for the complete worflow  
@@ -472,11 +457,15 @@ def render_smpl(sample_path,retrieval_path, vis,video_dir=None):
 	
 	if video_dir is not None:
 		video_dir = os.path.join(video_dir,f"{sample.openCapID}_{sample.label}_{sample.recordAttempt}")
-		if os.path.isfile(os.path.join(video_dir,f"{sample.label}_{sample.recordAttempt}_smpl.mp4")): 
-			return
-	
-	# Visualize each view  
-	vis.render_smpl_multi_view_callback(sample,video_dir=video_dir)
+
+		vis.update_smpl_multi_view_callback(sample,video_dir=video_dir)
+		vis.callback_render()	
+		video_name = os.path.join(video_dir, 'video', os.path.basename(retrieval_path).replace(".mot",'.mp4'))
+		assert os.path.isfile(video_name), f"FFMPEG unable to render video:{video_name}"
+			
+	else:
+		# Visualize each view  
+		vis.render_smpl_multi_view_callback(sample,video_dir=video_dir)
 
 
 
@@ -562,7 +551,16 @@ def load_retrived_samples(sample, retrieval_path):
 
 	return sample
 
-
+# Load file and render skeleton for each video
+def render_dataset(sample_path=None):
+	video_dir = RENDER_DIR
+	
+	vis = Visualizer()
+	
+	for subject in os.listdir(INPUT_DIR):
+		for trial_path in os.listdir(os.path.join(INPUT_DIR,subject,'MarkerData')):
+			trial_path = os.path.join(INPUT_DIR,subject,'MarkerData',trial_path)
+			render_smpl(trial_path, sample_path, vis,video_dir=video_dir)
 
 
 if __name__ == "__main__": 

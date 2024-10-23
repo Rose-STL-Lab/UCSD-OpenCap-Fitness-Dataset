@@ -156,7 +156,8 @@ class OSIMSequence():
         self._render_kwargs = kwargs
 
         # The node names of the skeleton model, the associated mesh and the template indices
-        self.node_names = [n.getName() for n in osim.skeleton.getBodyNodes()]
+        # self.node_names = [n.getName() for n in osim.skeleton.getBodyNodes()] # Old nimble 
+        self.node_names = [osim.skeleton.getBodyNode(i).getName() for i in range(osim.skeleton.getNumBodyNodes())]
         
         self.meshes_dict = {}
         self.indices_dict = {}
