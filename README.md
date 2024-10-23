@@ -116,47 +116,7 @@ python src/opencap_reconstruction_render.py <subject-path>  <mot-path>  <save-pa
 
 ## 1. Visualization 
 
-<details>
-<summary>Polyscope installation details </summary>
 
-- Linux
-
-```
-```
-
-- Windows 
-```
-```
-
-- Remote Server / North Servr / Linux Containers 
-
-
-    Polyscope has a lot of trouble installing on the remote server. But by installing the right packages we can make it work. 
-    3. Fix for error: 
-
-        ```
-            libGL error: MESA-LOADER: failed to open swrast: /home/ubuntu/.conda/envs/T2M-GPT/bin/../lib/libstdc++.so.6: version `GLIBCXX_3.4.29' not found (required by /usr/lib/dri/swrast_dri.so) (search paths /usr/lib/x86_64-linux-gnu/dri:\$${ORIGIN}/dri:/usr/lib/dri, suffix _dri)
-            libGL error: failed to load driver: swrast
-            GLFW emitted error: GLX: Failed to create context: GLXBadFBConfig
-        ```
-
-        ```
-            rm /home/ubuntu/.conda/envs/T2M-GPT/bin/../lib/libstdc++.so.6
-            ln -s /usr/lib/x86_64-linux-gnu/libstdc++.so.6  /home/ubuntu/.conda/envs/T2M-GPT/bin/../lib/libstdc++.so.6 
-        ```
-
-    4. Fix for `GLFW emitted error: The GLFW library is not initialized`
-        ```
-
-        ```
-
-    4. Fix for error: 
-        ```
-            DISPLAY not found
-        ```
-
-
-</details>
 
 
 ###  Rendering 
@@ -171,10 +131,41 @@ python3 python src/opencap_reconstruction_render.py <subject-path>  <mot-path>  
 
 
 <details>
-<summary> Running on a remote server ? </summary>
+<summary> Running on a Remote Server / North Servr / Linux Containers ? </summary>
 
-- Use `ssh -X` to login 
-- Set `export DISPLAY=:99.0`
+Polyscope has a lot of trouble installing on the remote server. Below are a few steps that can be taken for fix common errors. 
+
+1. Use `ssh -X` to login 
+2. Set `export DISPLAY=:99.0`
+
+3. Fix for error: 
+
+    ```
+        libGL error: MESA-LOADER: failed to open swrast: /home/ubuntu/.conda/envs/T2M-GPT/bin/../lib/libstdc++.so.6: version `GLIBCXX_3.4.29' not found (required by /usr/lib/dri/swrast_dri.so) (search paths /usr/lib/x86_64-linux-gnu/dri:\$${ORIGIN}/dri:/usr/lib/dri, suffix _dri)
+        libGL error: failed to load driver: swrast
+        GLFW emitted error: GLX: Failed to create context: GLXBadFBConfig
+    ```
+
+    ```
+        rm /home/ubuntu/.conda/envs/T2M-GPT/bin/../lib/libstdc++.so.6
+        ln -s /usr/lib/x86_64-linux-gnu/libstdc++.so.6  /home/ubuntu/.conda/envs/T2M-GPT/bin/../lib/libstdc++.so.6 
+    ```
+
+4. Fix for `GLFW emitted error: The GLFW library is not initialized`
+    ```
+        pip install glfw
+    ```
+
+5. Fix for error `DISPLAY not found`: 
+    ```
+        export DISPLAY=:99.0
+    ```
+
+6. Segfault: 
+    ```
+        export DISPLAY=:99.0
+    ```
+
 
 </details>
 
