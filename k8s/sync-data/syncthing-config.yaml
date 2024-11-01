@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: syncthing-config
+data:
+  config.xml: |
+    <configuration version="30">
+        <folder id="MCS_DATA" label="MCS_DATA" path="/mnt/data/MCS_DATA" type="readwrite">
+            <filesystemType>basic</filesystemType>
+            <device id="${DEVICE_ID}"/>
+        </folder>
+        <device id="${DEVICE_ID}" name="KubernetesPod" compression="metadata" introducer="false" skipIntroductionRemovals="false">
+            <address>dynamic</address>
+            <paused>false</paused>
+            <autoAcceptFolders>false</autoAcceptFolders>
+            <maxSendKbps>0</maxSendKbps>
+            <maxRecvKbps>0</maxRecvKbps>
+            <maxRequestKiB>0</maxRequestKiB>
+            <untrusted>false</untrusted>
+        </device>
+    </configuration>
