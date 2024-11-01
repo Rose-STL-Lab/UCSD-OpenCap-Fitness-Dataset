@@ -1,0 +1,63 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: spatiotemporal-decision-making
+  name: syncthing-setup
+spec:
+  template:
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 1
+              preference:
+                matchExpressions:
+              # - key: topology.kubernetes.io/region
+              #   operator: In
+              #   values:
+              #   - us-west
+                - key: nautilus.io/group
+                  operator: In
+                  values:
+                  - ry
+
+      containers:
+      - name: shubh-container
+        image: gitlab-registry.nrp-nautilus.io/prp/jupyter-stack/minimal
+        command:
+        - /bin/bash
+        - -c
+        args:
+        - "echo 'Hello, World!'"
+
+        resources:
+          limits:
+            memory: 20Gi
+            cpu: 8
+            nvidia.com/gpu: "1"
+          requests:
+            memory: 15Gi
+            cpu: 4
+            nvidia.com/gpu: "1"
+
+        volumeMounts:
+        - mountPath: /dev/shm
+          name: dshm
+        - mountPath: /vol
+          name: sports-analytics-database
+
+      tolerations:
+      - key: "nautilus.io/ry-reservation"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"  
+      restartPolicy: Never
+
+      volumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
+      - name: sports-analytics-database
+        persistentVolumeClaim:
+          claimName: sports-analytics-database
+  backoffLimit: 0

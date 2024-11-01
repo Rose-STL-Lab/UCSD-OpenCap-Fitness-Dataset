@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: data-transfer-pod
+  labels:
+    app: syncthing
+spec:
+  containers:
+  - name: syncthing
+    image: syncthing/syncthing:latest
+    ports:
+    - containerPort: 8384  # Syncthing web GUI port
+    - containerPort: 22000 # Syncthing sync port
+    - containerPort: 21027 # Syncthing discovery port
+    env:
+    - name: DEVICE_ID
+      value: "${DEVICE_ID}"
+    volumeMounts:
+    - mountPath: /mnt/data
+      name: sports-analytics-database
+    - mountPath: /var/syncthing/config
+      name: syncthing-config
+    command: ["/bin/sh"]
+    args: ["-c", "mkdir -p /mnt/data/MCS_DATA && /bin/syncthing -home=/var/syncthing/config"]
+  volumes:
+  - name: sports-analytics-database
+    persistentVolumeClaim:
+      claimName: sports-analytics-database
+  - name: syncthing-config
+    emptyDir: {}
+  restartPolicy: Never
