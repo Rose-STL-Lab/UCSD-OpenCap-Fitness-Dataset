@@ -23,12 +23,12 @@ spec:
 
       containers:
       - name: shubh-container
-        image: gitlab-registry.nrp-nautilus.io/prp/jupyter-stack/minimal
+        image: gitlab-registry.nrp-nautilus.io/shmaheshwari/sports-analytics:latest
         command:
         - /bin/bash
         - -c
         args:
-        - "echo 'Hello, World!'"
+        - "cd /mnt/data/ && chmod +x run.sh && /bin/bash run.sh"
 
         resources:
           limits:
@@ -43,7 +43,7 @@ spec:
         volumeMounts:
         - mountPath: /dev/shm
           name: dshm
-        - mountPath: /vol
+        - mountPath: /mnt/data
           name: sports-analytics-database
 
       tolerations:
