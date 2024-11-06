@@ -169,7 +169,8 @@ class CustomFormatter(logging.Formatter):
 		return formatter.format(record)
 
 def set_logger(task_name=None,return_writer=False):
-
+	if task_name is None:
+		task_name = "default"
 	os.makedirs(os.path.join(LOG_DIR, task_name),exist_ok=True)
 
 	logger = logging.getLogger(__name__)
