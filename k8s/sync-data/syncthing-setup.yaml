@@ -21,7 +21,7 @@ spec:
     - mountPath: /var/syncthing/config
       name: syncthing-config
     command: ["/bin/sh"]
-    args: ["-c", "mkdir -p /mnt/data/MCS_DATA && /bin/syncthing -home=/var/syncthing/config"]
+    args: ["-c", "mkdir -p /mnt/data/MCS_DATA && /bin/syncthing -home=/mnt/data/syncthing/config"]
   volumes:
   - name: sports-analytics-database
     persistentVolumeClaim:

@@ -10,23 +10,46 @@ spec:
         - weight: 1
           preference:
             matchExpressions:
-          # - key: topology.kubernetes.io/region
-          #   operator: In
-          #   values:
-          #   - us-west
             - key: nautilus.io/group
               operator: In
               values:
               - ry
+  tolerations:
+  - key: "nautilus.io/ry-reservation"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
   imagePullSecrets:
     - name: shubh-gitlab-registry
   containers:
   - name: shubh-container
     image: gitlab-registry.nrp-nautilus.io/shmaheshwari/sports-analytics:latest
-    # image: gitlab-registry.nrp-nautilus.io/prp/jupyter-stack/minimal
-    command: ["/bin/bash","-c"]
-    # args: ["cd /vol/se3-transformer-public && chmod +x installs.sh && ./installs.sh && sleep infinity"]
-    args: ["cd /mnt/data/ && chmod +x run.sh && /bin/sh run.sh"]
+    imagePullPolicy: Always
+    command: ["/bin/bash", "-c"]
+    args: 
+    - | 
+      conda init bash && # Use bash instead of sh to run the script
+      source ~/.bashrc &&
+
+      conda activate opencap-processing
+      pip install tqdm
+
+      # Link the data folder to the mounted data folder
+      cd /opencap-processing
+      ln -sf /mnt/data/MCS_DATA/Data Data
+
+      echo 'API_TOKEN="${API_TOKEN}"' > /opencap-processing/.env
+
+      cd /opencap-processing/Examples
+      python kubernetes_api.py --subject ${SUBJECT_ID} --mot-dir /mnt/data/MCS_DATA/Data/${SUBJECT_ID}/OpenSimData/Kinematics --segments /mnt/data/MCS_DATA/squat-segmentation-data/${SUBJECT_ID}.npy#  
+
+      sleep 10000
+
+    env: 
+    - name: API_TOKEN
+      value: "${API_TOKEN}"
+    - name: SUBJECT_ID
+      value: "${SUBJECT_ID}"
 
     volumeMounts:
     - mountPath: /dev/shm
@@ -35,24 +58,18 @@ spec:
       name: sports-analytics-database
     resources:
       limits:
-        nvidia.com/gpu: "1"
-        memory: "30G"
-        cpu: "4"
-        # ephemeral-storage: 1024Gi
+        nvidia.com/gpu: "0"
+        memory: "30Gi"
+        cpu: "8"
       requests:
-        nvidia.com/gpu: "1"
-        memory: "30G"
+        nvidia.com/gpu: "0"
+        memory: "20Gi"
         cpu: "4"
-  tolerations:
-  - key: "nautilus.io/ry-reservation"
-    operator: "Equal"
-    value: "true"
-    effect: "NoSchedule"  
-  restartPolicy: Never
   volumes:
-    - name: dshm
-      emptyDir:
-        medium: Memory
-    - name: sports-analytics-database
-      persistentVolumeClaim:
-        claimName: sports-analytics-database
+  - name: dshm
+    emptyDir:
+      medium: Memory
+  - name: sports-analytics-database
+    persistentVolumeClaim:
+      claimName: sports-analytics-database
+  restartPolicy: Never

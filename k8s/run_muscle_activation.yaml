@@ -1,63 +1,73 @@
-apiVersion: batch/v1
-kind: Job
+apiVersion: v1
+kind: Pod
 metadata:
   namespace: spatiotemporal-decision-making
-  name: syncthing-setup
+  name: muscle-simulation-pod
 spec:
-  template:
-    spec:
-      affinity:
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 1
-              preference:
-                matchExpressions:
-              # - key: topology.kubernetes.io/region
-              #   operator: In
-              #   values:
-              #   - us-west
-                - key: nautilus.io/group
-                  operator: In
-                  values:
-                  - ry
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 1
+          preference:
+            matchExpressions:
+            - key: nautilus.io/group
+              operator: In
+              values:
+              - ry
+  tolerations:
+  - key: "nautilus.io/ry-reservation"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
+  imagePullSecrets:
+    - name: shubh-gitlab-registry
+  containers:
+  - name: shubh-container
+    image: gitlab-registry.nrp-nautilus.io/shmaheshwari/sports-analytics:latest
+    imagePullPolicy: Always
+    command: ["/bin/bash", "-c"]
+    args: 
+    - | 
+      conda init bash && # Use bash instead of sh to run the script
+      source ~/.bashrc &&
 
-      containers:
-      - name: shubh-container
-        image: gitlab-registry.nrp-nautilus.io/shmaheshwari/sports-analytics:latest
-        command:
-        - /bin/bash
-        - -c
-        args:
-        - "cd /mnt/data/ && chmod +x run.sh && /bin/bash run.sh"
+      conda activate opencap-processing
+      pip install tqdm
 
-        resources:
-          limits:
-            memory: 20Gi
-            cpu: 8
-            nvidia.com/gpu: "1"
-          requests:
-            memory: 15Gi
-            cpu: 4
-            nvidia.com/gpu: "1"
+      # Link the data folder to the mounted data folder
+      cd /opencap-processing
+      ln -sf /mnt/data/MCS_DATA/Data Data
 
-        volumeMounts:
-        - mountPath: /dev/shm
-          name: dshm
-        - mountPath: /mnt/data
-          name: sports-analytics-database
+      echo 'API_TOKEN="${API_TOKEN}"' > /opencap-processing/.env
 
-      tolerations:
-      - key: "nautilus.io/ry-reservation"
-        operator: "Equal"
-        value: "true"
-        effect: "NoSchedule"  
-      restartPolicy: Never
+      cd /opencap-processing/Examples
+      python kubernetes_api.py --subject ${SUBJECT_ID} --mot-dir /mnt/data/MCS_DATA/Data/${SUBJECT_ID}/OpenSimData/Kinematics --segments /mnt/data/MCS_DATA/squat-segmentation-data/${SUBJECT_ID}.npy#  
 
-      volumes:
-      - name: dshm
-        emptyDir:
-          medium: Memory
-      - name: sports-analytics-database
-        persistentVolumeClaim:
-          claimName: sports-analytics-database
-  backoffLimit: 0
+      sleep 10000
+
+    env: 
+    - name: API_TOKEN
+      value: "${API_TOKEN}"
+
+    volumeMounts:
+    - mountPath: /dev/shm
+      name: dshm
+    - mountPath: /mnt/data
+      name: sports-analytics-database
+    resources:
+      limits:
+        nvidia.com/gpu: "0"
+        memory: "12Gi"
+        cpu: "16"
+      requests:
+        nvidia.com/gpu: "0"
+        memory: "16Gi"
+        cpu: "32"
+  volumes:
+  - name: dshm
+    emptyDir:
+      medium: Memory
+  - name: sports-analytics-database
+    persistentVolumeClaim:
+      claimName: sports-analytics-database
+  restartPolicy: Never
