@@ -356,4 +356,11 @@ Then
 4. Select server to sync with 
 
 
+
+
+-------------------------------------- 
+Kubernetes syncthing setup manual steps: 
+1. open syncthing everywhere 
+2. add devices everywhere 
+3. folder -> edit everywhere 
     
