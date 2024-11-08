@@ -74,10 +74,10 @@ spec:
       ln -sf /mnt/data/MCS_DATA/Data Data
 
       echo 'API_TOKEN="{API_TOKEN}"' > /opencap-processing/.env
+      export PYTHONUNBUFFERED=1
 
       cd /opencap-processing/Examples
-
-      conda run -n opencap-processing python kubernetes_api.py --subject {subject_id} --mot-dir /mnt/data/MCS_DATA/Data/{subject_id}/OpenSimData/Kinematics --segments /mnt/data/MCS_DATA/squat-segmentation-data/{subject_id}.npy  
+      conda run -n opencap-processing python kubernetes_api.py --subject {subject_id} --mot-dir /mnt/data/MCS_DATA/Data/{subject_id}/OpenSimData/Kinematics --segments /mnt/data/MCS_DATA/squat-segmentation-data/{subject_id}.npy  | tee /mnt/data/MCS_DATA/Data/{subject_id}/OpenSimData/Dynamics/log.txt
 
 
     env: 
