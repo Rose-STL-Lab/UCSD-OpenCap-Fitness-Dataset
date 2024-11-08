@@ -379,7 +379,7 @@ if __name__ == "__main__":
 
     subjects = {}
     sessions = os.listdir(os.path.join(DATA_DIR, 'Data'))
-    # sessions = ["c28e768f-6e2b-4726-8919-c05b0af61e4a"]
+    # sessions = ["349e4383-da38-4138-8371-9a5fed63a56a"]
 
     checked_subject_cnt = 85
 
@@ -405,13 +405,12 @@ if __name__ == "__main__":
     
         ## If mcs files, then use dtw segmetation to start with 
         if subject_name in mcs_sessions:   
-
-            
-
-
-
-
             for trial_name in subjects[subject_name]: 
+                
+                if subject_name == "349e4383-da38-4138-8371-9a5fed63a56a" and trial_name == "SQT01": 
+                    continue
+                
+                
                 label,recordAttempt_str,recordAttempt = OldDataLoader.get_label(trial_name + '.trc')
 
                 dtw_segment_path = os.path.join( DATA_DIR,'DTW-Segmentation', subject_name + '_' + label + '_' + str(recordAttempt) + '.npy' )
@@ -436,7 +435,13 @@ if __name__ == "__main__":
                                                 isdeg=True,visualize=subject_ind > checked_subject_cnt,fig_title=fig_title)
                 
                 segments = []
+                
+                assert len(segments_all_trials) == len(segments_old), f"Segments:{segments_all_trials} Segments Old:{segments_old}" 
+
                 for segment_id, segment in enumerate(segments_all_trials): 
+                    for k in range(len(segments_all_trials[segment])):
+                        segments_all_trials[segment][k][0] += segments_old[segment_id][0]
+                        segments_all_trials[segment][k][1] += segments_old[segment_id][0]
                     segments.extend(segments_all_trials[segment]) 
                 
                 segments_all_trials = {trial_name:segments}
