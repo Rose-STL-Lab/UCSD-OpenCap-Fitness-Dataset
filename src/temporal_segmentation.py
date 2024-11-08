@@ -379,9 +379,9 @@ if __name__ == "__main__":
 
     subjects = {}
     sessions = os.listdir(os.path.join(DATA_DIR, 'Data'))
-    # sessions = ["349e4383-da38-4138-8371-9a5fed63a56a"]
+    # sessions = ["2345d831-6038-412e-84a9-971bc04da597"]
 
-    checked_subject_cnt = 85
+    checked_subject_cnt = len(sessions)
 
     for subject_ind, subject_name in tqdm.tqdm(enumerate(sessions)):
         print(f"Checking Subject:{subject_ind} Name:{subject_name}")
@@ -393,7 +393,7 @@ if __name__ == "__main__":
         print(f"Evaluating Id: {subject_ind} Name: {subject_name}")
 
         subject = OpenCapLoader(subject_name)
-        subject_squat = subject.load_sqauat_trial_kinematics()
+        subject_squat = subject.load_squat_trial_kinematics()
         
         if subject_squat is None: 
             continue
@@ -438,7 +438,10 @@ if __name__ == "__main__":
                 
                 assert len(segments_all_trials) == len(segments_old), f"Segments:{segments_all_trials} Segments Old:{segments_old}" 
 
-                for segment_id, segment in enumerate(segments_all_trials): 
+                # sort the keys 
+                segment_name_sorted = sorted(segments_all_trials.keys(), key=lambda x: int(x.replace('SQT',''))) 
+
+                for segment_id, segment in enumerate(segment_name_sorted): 
                     for k in range(len(segments_all_trials[segment])):
                         segments_all_trials[segment][k][0] += segments_old[segment_id][0]
                         segments_all_trials[segment][k][1] += segments_old[segment_id][0]
