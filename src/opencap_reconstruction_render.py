@@ -424,7 +424,7 @@ class Visualizer:
 		palette_path = os.path.join(video_dir,"video",f"smpl.png")
 		frame_rate = self.ps_data['fps']
 		os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -vf palettegen {palette_path}")
-		os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse 	 {video_path}")	
+		os.system(f"ffmpeg -y -pix_fmt yuv420p -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse 	 {video_path}")	
 		# os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse {video_path.replace('mp4','gif')}")	
 
 		print(f"Running Command:",f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse {video_path}")
@@ -534,7 +534,7 @@ def load_retrived_samples(sample, retrieval_path):
 
 	assert retrieval_path and os.path.isfile(retrieval_path), f"Unable to load .mot file:{retrieval_path}" 
 
-	mot_path = retrieval_path
+	mot_path = os.path.abspath(retrieval_path)
 	print("Loading Generatrion file:",mot_path)
 
 	osim_path = os.path.dirname(os.path.dirname(sample.sample_path)) 

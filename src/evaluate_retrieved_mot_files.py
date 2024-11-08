@@ -47,7 +47,7 @@ def get_mcs_session_ids(mcs_score_sheet_file):
 	
 	mcs_sessions = mcs_file['OpenCapID'].values
 
-	return mcs_sessions
+	return mcs_sessions[0:1]
 
 def store_and_load_motion(osim_path, osim, mot_file,save_dir='MCS_DATA/RetrievedMotion',force_save=False):
 
