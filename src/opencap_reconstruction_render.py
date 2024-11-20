@@ -453,7 +453,7 @@ class Visualizer:
 		palette_path = os.path.join(video_dir,"video",f"smpl.png")
 		frame_rate = self.ps_data['fps']
 		os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -vf palettegen {palette_path}")
-		os.system(f"ffmpeg -y -pix_fmt yuv420p -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse 	 {video_path}")	
+		os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse 	-q:v 5 {video_path}")	
 		# os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse {video_path.replace('mp4','gif')}")	
 
 		print(f"Running Command:",f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse {video_path}")
