@@ -137,6 +137,7 @@ Polyscope has a lot of trouble installing on the remote server. Below are a few 
 
 1. Use `ssh -X` to login 
 2. Set `export DISPLAY=:99.0`
+3. Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
 
 3. Fix for error: 
 
@@ -165,6 +166,12 @@ Polyscope has a lot of trouble installing on the remote server. Below are a few 
     ```
         export DISPLAY=:99.0
     ```
+
+7. Fix for `GLFW emitted error: X11: Failed to open display :99.0`
+    ```
+        Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+    ```
+
 
 
 </details>

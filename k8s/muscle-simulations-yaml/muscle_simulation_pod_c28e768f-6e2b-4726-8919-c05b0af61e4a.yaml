@@ -1,0 +1,80 @@
+
+apiVersion: v1
+kind: Pod
+metadata:
+  namespace: spatiotemporal-decision-making
+  name: muscle-simulation-pod-c28e768f-6e2b-4726-8919-c05b0af61e4a
+spec:
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 1
+          preference:
+            matchExpressions:
+            - key: nautilus.io/group
+              operator: In
+              values:
+              - ry
+  tolerations:
+  - key: "nautilus.io/ry-reservation"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
+  imagePullSecrets:
+    - name: shubh-gitlab-registry
+  containers:
+  - name: shubh-container
+    image: gitlab-registry.nrp-nautilus.io/shmaheshwari/sports-analytics:latest
+    imagePullPolicy: Always
+    command: ["/bin/bash", "-c"]
+    args: 
+    - | 
+      conda init bash 
+      source ~/.bashrc
+      source /root/.bashrc
+
+      conda activate opencap-processing
+      pip install tqdm 
+      conda run -n opencap-processing pip install tqdm
+
+      # Link the data folder to the mounted data folder
+      cd /opencap-processing
+      git -c http.sslVerify=false  pull origin main
+
+      ln -sf /mnt/data/MCS_DATA/Data Data
+
+      echo 'API_TOKEN="fa446e7d1a506d58c3d796df1abf55810823b6d5"' > /opencap-processing/.env
+      export PYTHONUNBUFFERED=1
+
+      cd /opencap-processing/Examples
+      conda run -n opencap-processing python kubernetes_api.py --subject c28e768f-6e2b-4726-8919-c05b0af61e4a --mot-dir /mnt/data/MCS_DATA/Data/c28e768f-6e2b-4726-8919-c05b0af61e4a/OpenSimData/Kinematics --segments /mnt/data/MCS_DATA/squat-segmentation-data/c28e768f-6e2b-4726-8919-c05b0af61e4a.npy  | tee /mnt/data/MCS_DATA/Data/c28e768f-6e2b-4726-8919-c05b0af61e4a/OpenSimData/Dynamics/log.txt
+
+
+    env: 
+    - name: API_TOKEN
+      value: "fa446e7d1a506d58c3d796df1abf55810823b6d5"
+    - name: SUBJECT_ID
+      value: "c28e768f-6e2b-4726-8919-c05b0af61e4a"
+
+    volumeMounts:
+    - mountPath: /dev/shm
+      name: dshm
+    - mountPath: /mnt/data
+      name: sports-analytics-database
+    resources:
+      limits:
+        nvidia.com/gpu: "0"
+        memory: "32Gi"
+        cpu: "16"
+      requests:
+        nvidia.com/gpu: "0"
+        memory: "32Gi"
+        cpu: "16"
+  volumes:
+  - name: dshm
+    emptyDir:
+      medium: Memory
+  - name: sports-analytics-database
+    persistentVolumeClaim:
+      claimName: sports-analytics-database
+  restartPolicy: Never

@@ -72,7 +72,7 @@ def load_data(args,npy_file):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--sample_dir', type=str, default='data/humanml3d/new_joints_vecs')
-    parser.add_argument('--data_rep', type=str, default='xyz', choices=['xyz', 'humanml', 'brax_ik','mdm','t2m', 'LIMO', 'mot'])
+    parser.add_argument('--data_rep', type=str, default='mot', choices=['xyz', 'humanml', 'brax_ik','mdm','t2m', 'LIMO', 'mot'])
     parser.add_argument('--feet_threshold', type=float, default=0.01)
     parser.add_argument('--framerate', type=float, default=60)
     args = parser.parse_args()

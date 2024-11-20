@@ -40,14 +40,16 @@ def get_mcs_session_ids(mcs_score_sheet_file):
 			List of MCS session ids
 	"""
 
-	assert os.path.exists(mcs_score_sheet_file), f"MCS score sheet file:{mcs_score_sheet_file} does not exist"
+	# assert os.path.exists(mcs_score_sheet_file), f"MCS score sheet file:{mcs_score_sheet_file} does not exist"
 
 
-	mcs_file = pd.read_csv(mcs_score_sheet_file).dropna() # Removing NaN values
-	
-	mcs_sessions = mcs_file['OpenCapID'].values
+	# mcs_file = pd.read_csv(mcs_score_sheet_file).dropna() # Removing NaN values
+	# print("MCS Score Sheet File:",mcs_file.columns)
+	# mcs_sessions = mcs_file['OpenCapID'].values
+	# return ["000cffd9-e154-4ce5-a075-1b4e1fd66201"]
+	return ["349e4383-da38-4138-8371-9a5fed63a56a"]
+	# return ["349e4383-da38-4138-8371-9a5fed63a56a","015b7571-9f0b-4db4-a854-68e57640640d","c613945f-1570-4011-93a4-8c8c6408e2cf","dfda5c67-a512-4ca2-a4b3-6a7e22599732","7562e3c0-dea8-46f8-bc8b-ed9d0f002a77","275561c0-5d50-4675-9df1-733390cd572f","0e10a4e3-a93f-4b4d-9519-d9287d1d74eb","a5e5d4cd-524c-4905-af85-99678e1239c8","dd215900-9827-4ae6-a07d-543b8648b1da","3d1207bf-192b-486a-b509-d11ca90851d7","c28e768f-6e2b-4726-8919-c05b0af61e4a","fb6e8f87-a1cc-48b4-8217-4e8b160602bf","e6b10bbf-4e00-4ac0-aade-68bc1447de3e","d66330dc-7884-4915-9dbb-0520932294c4","0d9e84e9-57a4-4534-aee2-0d0e8d1e7c45","2345d831-6038-412e-84a9-971bc04da597","0a959024-3371-478a-96da-bf17b1da15a9","ef656fe8-27e7-428a-84a9-deb868da053d","c08f1d89-c843-4878-8406-b6f9798a558e","d2020b0e-6d41-4759-87f0-5c158f6ab86a","8dc21218-8338-4fd4-8164-f6f122dc33d9"]
 
-	return mcs_sessions
 
 def store_and_load_motion(osim_path, osim, mot_file,save_dir='MCS_DATA/RetrievedMotion',force_save=False):
 
@@ -82,6 +84,8 @@ def get_multiple_motions_for_mcs_data(args):
 	assert os.path.exists(args.data_dir), f"Mot files:{args.data_dir} directory does not exist"
 
 	osim_geometry_dir = os.path.join(utils.DATA_DIR,'OpenCap_LaiArnoldModified2017_Geometry')
+ 
+	print("Loading MCS data from:",args.data_dir)
 
 	# Load only mcs session ids
 	mcs_score_sheet_file = os.path.join(args.data_dir, 'OpenCap-MCS-score-sheet-MCS-Scores.csv')	
@@ -94,7 +98,7 @@ def get_multiple_motions_for_mcs_data(args):
 	for session_index, session_id in enumerate(session_ids):
 
 		subject_path = os.path.join(args.data_dir, 'Data',session_id) 
-		osim_path = os.path.join(subject_path,'OpenSimData','Model', 'LaiArnoldModified2017_poly_withArms_weldHand_scaled.osim')
+		osim_path = os.path.join(subject_path,'OpenSimData','Model', 'LaiArnoldModified2017_poly_withArms_weldHand_scaled_adjusted_contacts.osim')
 
 		assert os.path.exists(osim_path), f"Osim file:{osim_path} does not exist"
 		assert os.path.exists(osim_geometry_dir), f"Osim geometry path:{osim_geometry_dir} does not exist"
@@ -106,7 +110,7 @@ def get_multiple_motions_for_mcs_data(args):
 		save_dir = os.path.join(args.data_dir, 'Data',session_id, 'OpenSimData','RetrievedMotion')
 		os.makedirs(save_dir, exist_ok=True)
 
-		
+		print(os.path.join(subject_path,'OpenSimData',args.mot))
 
 		osim = load_osim(osim_path, osim_geometry_dir,ignore_geometry=False)
 
@@ -175,8 +179,28 @@ def get_multiple_motions_for_mcs_data(args):
 						print(e)
 						continue
 
+			elif 'PredDynamics' in args.mot:
+				for trial_name in os.listdir(os.path.join(subject_path,'OpenSimData',args.mot)):
+					if args.category.lower() not in trial_name.lower(): continue# If does not match the category matching critirea
+
+					if not os.path.isdir(os.path.join(subject_path,'OpenSimData',args.mot, trial_name)): continue # Skip if not a directory
+
+					# After running torque driven simulation, the kinematics and kinetics files are stored in the following format	
+					mot_file = os.path.join(subject_path,'OpenSimData',args.mot, trial_name,f"kinematics_activations_{trial_name}_muscle_driven.mot")
+
+					if not os.path.exists(mot_file): continue # Skip if directory does not contain the kinematics file. Probably the simulation failed
+
+					try:
+						joint_centers_file, joint_centers = store_and_load_motion(osim_path, osim, mot_file, save_dir=save_dir,force_save=args.force)
+						subject_retreived_motions[session_id].append((joint_centers_file, joint_centers))			
+						
+					except NOT_MOT_FILE_ERROR as e:
+						print(e)
+						continue
+
 		else: 
-			raise NOT_MOT_FILE_ERROR(f"Invalid motion file/directory:{args.mot}")
+			# raise NOT_MOT_FILE_ERROR(f"Invalid motion file/directory:{args.mot}")
+			continue
  
 		
 		print(f"Sessions[{session_index}/{len(session_ids)}]:{session_id} Motion Files:{len(subject_retreived_motions[session_id])}")

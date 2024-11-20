@@ -14,7 +14,7 @@ from smpl_loader import SMPLRetarget
 from osim import OSIMSequence
 
 class Visualizer: 
-	def __init__(self): 
+	def __init__(self,renderSMPL=False): 
 		
 		ps.init()
 
@@ -23,7 +23,9 @@ class Visualizer:
 		ps.set_automatically_compute_scene_extents(True)
 		ps.set_navigation_style("free")
 		# ps.set_view_projection_mode("orthographic")
-		ps.set_ground_plane_mode('shadow_only')
+		# ps.set_ground_plane_mode('shadow_only')
+
+		self.renderSMPL = renderSMPL
 
 
 	def read_display_size(self):
@@ -52,20 +54,23 @@ class Visualizer:
 		
 
 		### Update animation based on self.t
-		if 'ps_mesh' in self.ps_data:
-			t = self.ps_data['t']
+		t = self.ps_data['t']
+
+		# ps_mesh.set_color(mesh_colors[i])
+		self.ps_data['ps_markers'].update_point_positions(self.ps_data['target_joints'][t])
+		
+		if self.renderSMPL:
 			self.ps_data['ps_mesh'].update_vertex_positions(self.ps_data['verts'][t])
-			# ps_mesh.set_color(mesh_colors[i])
 			self.ps_data['ps_target_skeleton'].update_node_positions(self.ps_data['target_joints'][t])
 			self.ps_data['ps_smpl_skeleton'].update_node_positions(self.ps_data['Jtr'][t])
 			self.ps_data['ps_offset_skeleton'].update_node_positions(self.ps_data['Jtr_offset'][t])
 			self.ps_data['ps_joint_mapping'].update_node_positions(np.concatenate([self.ps_data['target_joints'][t,self.ps_data['dataset_index']],self.ps_data['Jtr_offset'][t]],axis=0))
 
-			self.ps_data['ps_biomechnical'].update_vertex_positions(self.ps_data['biomechanical'][t])
-			self.ps_data['ps_biomechnical_joints'].update_point_positions(self.ps_data['biomechanical_joints'][t])
+		self.ps_data['ps_biomechnical'].update_vertex_positions(self.ps_data['biomechanical'][t])
+		self.ps_data['ps_biomechnical_joints'].update_point_positions(self.ps_data['biomechanical_joints'][t])
 
-			self.ps_data['ps_biomechnical_pred'].update_vertex_positions(self.ps_data['biomechanical_pred'][t])
-			self.ps_data['ps_biomechnical_joints_pred'].update_point_positions(self.ps_data['biomechanical_joints_pred'][t])
+		self.ps_data['ps_biomechnical_pred'].update_vertex_positions(self.ps_data['biomechanical_pred'][t])
+		self.ps_data['ps_biomechnical_joints_pred'].update_point_positions(self.ps_data['biomechanical_joints_pred'][t])
 
 		
 		if not self.ps_data['is_paused']: 
@@ -211,54 +216,55 @@ class Visualizer:
 
 
 		target = sample.joints_np
-		verts,Jtr,Jtr_offset = sample.smpl()
 
-		verts = verts.cpu().data.numpy()
-		
+		if self.renderSMPL:
+			verts,Jtr,Jtr_offset = sample.smpl()
+			verts = verts.cpu().data.numpy()
+			Jtr = Jtr.cpu().data.numpy()
+				
 		# Initialize ps_data for polyscope
 		if not hasattr(self,'ps_data'):
 			
 			ps.init()
 			self.ps_data = {}
-			self.ps_data['bbox'] = verts.max(axis=(0,1)) - verts.min(axis=(0,1))
+			self.ps_data['bbox'] = target.max(axis=(0,1)) - target.min(axis=(0,1))
 			self.ps_data['object_position'] = sample.joints_np[0,0]
 
 		ps.remove_all_structures()
 		# camera_position = np.array([0,0,3*self.ps_data['bbox'][0]])
-		camera_position = np.array([5*self.ps_data['bbox'][0],0.5*self.ps_data['bbox'][1],0]) + self.ps_data['object_position']
+		camera_position = np.array([7*self.ps_data['bbox'][0],0.0*self.ps_data['bbox'][1],0]) + self.ps_data['object_position']
 		look_at_position = np.array([0,0,0]) + self.ps_data['object_position']
 		ps.look_at(camera_position,look_at_position)
 
 
-
-		Jtr = Jtr.cpu().data.numpy() + np.array([0,0,0])*self.ps_data['bbox']
-
-		verts += np.array([0, 0, 0]) * self.ps_data['bbox']
+	
 		# target_joints = target - target[:,7:8,:] + Jtr[:,0:1,:] + np.array([0,0,0])*self.ps_data['bbox']
 		target_joints = target + np.array([0,0,0])*self.ps_data['bbox']
-
-		Jtr_offset = Jtr_offset[:,sample.smpl.index['smpl_index']].cpu().data.numpy() + np.array([0.0,0,0])*self.ps_data['bbox']       
-		# Jtr_offset = Jtr_offset.cpu().data.numpy() + np.array([0,0,0])*self.ps_data['bbox']       
-
-		ps_mesh = ps.register_surface_mesh('mesh',verts[0],sample.smpl.smpl_layer.smpl_data['f'],transparency=0.7)
-		
-
-		target_bone_array = np.array([[i,p] for i,p in enumerate(sample.smpl.index['dataset_parent_array'])])
-		ps_target_skeleton = ps.register_curve_network(f"Target Skeleton",target_joints[0],target_bone_array,color=np.array([0,0,1]),enabled=False)
-
-		smpl_bone_array = np.array([[i,p] for i,p in enumerate(sample.smpl.index['parent_array'])])
-		ps_smpl_skeleton = ps.register_curve_network(f"Smpl Skeleton",Jtr[0],smpl_bone_array,color=np.array([1,0,0]),enabled=False)
-
-		smpl_index = list(sample.smpl.index['smpl_index'].cpu().data.numpy())    
-
-		offset_skeleton_bones = np.array([[x,smpl_index.index(sample.smpl.index['parent_array'][i])] for x,i in enumerate(smpl_index) if sample.smpl.index['parent_array'][i] in smpl_index])
-		ps_offset_skeleton = ps.register_curve_network(f"Offset Skeleton",Jtr_offset[0],offset_skeleton_bones,color=np.array([1,1,0]),enabled=False)
+		ps_markers = ps.register_point_cloud("Markers",target_joints[0],color=np.array([0,0,0]))
 
 
-		dataset_index = list(sample.smpl.index['dataset_index'].cpu().data.numpy())    		
-		joint_mapping = np.concatenate([target_joints[0,dataset_index],Jtr_offset[0]],axis=0)
-		joint_mapping_edges = np.array([(i,joint_mapping.shape[0]//2+i) for i in range(joint_mapping.shape[0]//2)])
-		ps_joint_mapping = ps.register_curve_network(f"Mapping (target- smpl) joints",joint_mapping,joint_mapping_edges,radius=0.001,color=np.array([0,1,0]),enabled=False)
+		if self.renderSMPL:
+
+			Jtr_offset = Jtr_offset[:,sample.smpl.index['smpl_index']].cpu().data.numpy() + np.array([0.0,0,0])*self.ps_data['bbox']       
+			# Jtr_offset = Jtr_offset.cpu().data.numpy() + np.array([0,0,0])*self.ps_data['bbox']       
+
+			ps_mesh = ps.register_surface_mesh('mesh',verts[0],sample.smpl.smpl_layer.smpl_data['f'],transparency=0.7)
+			
+			target_bone_array = np.array([[i,p] for i,p in enumerate(sample.smpl.index['dataset_parent_array'])])
+			ps_target_skeleton = ps.register_curve_network(f"Target Skeleton",target_joints[0],target_bone_array,color=np.array([0,0,1]),enabled=False)
+
+			smpl_bone_array = np.array([[i,p] for i,p in enumerate(sample.smpl.index['parent_array'])])
+			ps_smpl_skeleton = ps.register_curve_network(f"Smpl Skeleton",Jtr[0],smpl_bone_array,color=np.array([1,0,0]),enabled=False)
+
+			smpl_index = list(sample.smpl.index['smpl_index'].cpu().data.numpy())    
+
+			offset_skeleton_bones = np.array([[x,smpl_index.index(sample.smpl.index['parent_array'][i])] for x,i in enumerate(smpl_index) if sample.smpl.index['parent_array'][i] in smpl_index])
+			ps_offset_skeleton = ps.register_curve_network(f"Offset Skeleton",Jtr_offset[0],offset_skeleton_bones,color=np.array([1,1,0]),enabled=False)
+
+			dataset_index = list(sample.smpl.index['dataset_index'].cpu().data.numpy())    		
+			joint_mapping = np.concatenate([target_joints[0,dataset_index],Jtr_offset[0]],axis=0)
+			joint_mapping_edges = np.array([(i,joint_mapping.shape[0]//2+i) for i in range(joint_mapping.shape[0]//2)])
+			ps_joint_mapping = ps.register_curve_network(f"Mapping (target- smpl) joints",joint_mapping,joint_mapping_edges,radius=0.001,color=np.array([0,1,0]),enabled=False)
 
 		ps_cams = []
 		# Set indivdual cameras 
@@ -301,11 +307,17 @@ class Visualizer:
 		# self.ps_data = {}
 
 		# Map all polyscope objects to ps_data
-		self.ps_data['ps_mesh'] = ps_mesh
-		self.ps_data['ps_target_skeleton'] = ps_target_skeleton
-		self.ps_data['ps_smpl_skeleton'] = ps_smpl_skeleton
-		self.ps_data['ps_offset_skeleton'] = ps_offset_skeleton
-		self.ps_data['ps_joint_mapping'] = ps_joint_mapping
+	
+		self.ps_data['ps_markers'] = ps_markers
+
+		if self.renderSMPL: 
+			self.ps_data['ps_mesh'] = ps_mesh 
+			self.ps_data['ps_target_skeleton'] = ps_target_skeleton
+			self.ps_data['ps_smpl_skeleton'] = ps_smpl_skeleton
+			self.ps_data['ps_offset_skeleton'] = ps_offset_skeleton
+			self.ps_data['ps_joint_mapping'] = ps_joint_mapping
+
+
 		self.ps_data['ps_cams'] = ps_cams
 		self.ps_data['ps_biomechnical'] = ps_biomechnical
 		self.ps_data['ps_biomechnical_joints'] = ps_biomechnical_joints
@@ -314,16 +326,20 @@ class Visualizer:
 		self.ps_data['ps_biomechnical_joints_pred'] = ps_biomechnical_joints_pred
 
 		# Map all the animation data
-		self.ps_data['verts'] = verts
-		self.ps_data['target_joints'] = target_joints
-		self.ps_data['Jtr'] = Jtr
-		self.ps_data['Jtr_offset'] = Jtr_offset
-		self.ps_data['dataset_index'] = dataset_index
-		self.ps_data['biomechanical'] = sample.osim.vertices
-		self.ps_data['biomechanical_joints'] = sample.osim.joints
+		self.ps_data['target_joints'] = target_joints + np.array([0,0,+0.6])*self.ps_data['bbox']
+		if self.renderSMPL:
+			self.ps_data['verts'] = verts + np.array([0,0,+0.6])*self.ps_data['bbox']
 
-		self.ps_data['biomechanical_pred'] = sample.osim_pred.vertices
-		self.ps_data['biomechanical_joints_pred'] = sample.osim_pred.joints
+			self.ps_data['Jtr'] = Jtr + np.array([0,0,+0.6])*self.ps_data['bbox']
+			self.ps_data['Jtr_offset'] = Jtr_offset + np.array([0,0,+0.6])*self.ps_data['bbox']
+			
+			self.ps_data['dataset_index'] = dataset_index 
+
+		self.ps_data['biomechanical'] = sample.osim.vertices + np.array([0,0,+0.6])*self.ps_data['bbox']
+		self.ps_data['biomechanical_joints'] = sample.osim.joints + np.array([0,0,+0.6])*self.ps_data['bbox']
+
+		self.ps_data['biomechanical_pred'] = sample.osim_pred.vertices + np.array([0,0,-0.6])*self.ps_data['bbox']
+		self.ps_data['biomechanical_joints_pred'] = sample.osim_pred.joints + np.array([0,0,-0.6])*self.ps_data['bbox']
 
 
 		# Map all the rendering information
@@ -334,7 +350,7 @@ class Visualizer:
 
 		# Animation details  
 		self.ps_data['t'] = 0 
-		self.ps_data['T'] = min(verts.shape[0], sample.osim.vertices.shape[0], sample.osim_pred.vertices.shape[0])
+		self.ps_data['T'] = min(sample.osim.vertices.shape[0], sample.osim_pred.vertices.shape[0])
 		self.ps_data['is_paused'] = False
 		self.ps_data['ui_text'] = "Enter Instructions here"
 
@@ -359,21 +375,31 @@ class Visualizer:
 		
 	def callback_render(self):
 
-		verts = self.ps_data['verts']
-		ps_mesh = self.ps_data['ps_mesh']
 		target_joints = self.ps_data['target_joints']
-		Jtr = self.ps_data['Jtr']
-		Jtr_offset = self.ps_data['Jtr_offset']
+		
+
+		if self.renderSMPL:
+			verts = self.ps_data['verts']
+			ps_mesh = self.ps_data['ps_mesh']
+
+			Jtr = self.ps_data['Jtr']
+			Jtr_offset = self.ps_data['Jtr_offset']
+			dataset_index = self.ps_data['dataset_index']
+
+
+
 		biomechanical = self.ps_data['biomechanical']
 		biomechanical_joints = self.ps_data['biomechanical_joints']
 
 		biomechanical_pred = self.ps_data['biomechanical_pred']
 		biomechanical_joints_pred = self.ps_data['biomechanical_joints_pred']
 
-		ps_target_skeleton = self.ps_data['ps_target_skeleton']
-		ps_smpl_skeleton = self.ps_data['ps_smpl_skeleton']
-		ps_offset_skeleton = self.ps_data['ps_offset_skeleton']
-		ps_joint_mapping = self.ps_data['ps_joint_mapping']	
+		ps_markers = self.ps_data['ps_markers']
+		if self.renderSMPL:
+			ps_target_skeleton = self.ps_data['ps_target_skeleton']
+			ps_smpl_skeleton = self.ps_data['ps_smpl_skeleton']
+			ps_offset_skeleton = self.ps_data['ps_offset_skeleton']
+			ps_joint_mapping = self.ps_data['ps_joint_mapping']	
 
 		ps_biomechnical = self.ps_data['ps_biomechnical']
 		ps_biomechnical_joints = self.ps_data['ps_biomechnical_joints']
@@ -381,7 +407,6 @@ class Visualizer:
 		ps_biomechnical_pred = self.ps_data['ps_biomechnical_pred']
 		ps_biomechnical_joints_pred = self.ps_data['ps_biomechnical_joints_pred']
 
-		dataset_index = self.ps_data['dataset_index']
 
 		video_dir = self.ps_data['video_dir']
 
@@ -398,13 +423,17 @@ class Visualizer:
 		print(f'Rendering images:')
 		for i in tqdm(range(self.ps_data['T'])):
 			
-			ps_mesh.update_vertex_positions(verts[i])
-			# ps_mesh.set_color(mesh_colors[i])
+			ps_markers.update_point_positions(target_joints[i])
 
-			ps_target_skeleton.update_node_positions(target_joints[i])
-			ps_smpl_skeleton.update_node_positions(Jtr[i])
-			ps_offset_skeleton.update_node_positions(Jtr_offset[i])
-			ps_joint_mapping.update_node_positions(np.concatenate([target_joints[i,dataset_index],Jtr_offset[i]],axis=0))
+			if self.renderSMPL:
+
+				ps_mesh.update_vertex_positions(verts[i])
+				# ps_mesh.set_color(mesh_colors[i])
+
+				ps_target_skeleton.update_node_positions(target_joints[i])
+				ps_smpl_skeleton.update_node_positions(Jtr[i])
+				ps_offset_skeleton.update_node_positions(Jtr_offset[i])
+				ps_joint_mapping.update_node_positions(np.concatenate([target_joints[i,dataset_index],Jtr_offset[i]],axis=0))
 
 			ps_biomechnical.update_vertex_positions(biomechanical[i])
 			ps_biomechnical_joints.update_point_positions(biomechanical_joints[i])
@@ -424,7 +453,7 @@ class Visualizer:
 		palette_path = os.path.join(video_dir,"video",f"smpl.png")
 		frame_rate = self.ps_data['fps']
 		os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -vf palettegen {palette_path}")
-		os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse 	 {video_path}")	
+		os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse 	-q:v 5 {video_path}")	
 		# os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse {video_path.replace('mp4','gif')}")	
 
 		print(f"Running Command:",f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse {video_path}")
@@ -534,7 +563,7 @@ def load_retrived_samples(sample, retrieval_path):
 
 	assert retrieval_path and os.path.isfile(retrieval_path), f"Unable to load .mot file:{retrieval_path}" 
 
-	mot_path = retrieval_path
+	mot_path = os.path.abspath(retrieval_path)
 	print("Loading Generatrion file:",mot_path)
 
 	osim_path = os.path.dirname(os.path.dirname(sample.sample_path)) 
@@ -546,7 +575,7 @@ def load_retrived_samples(sample, retrieval_path):
 	print("Pelivs:",np.rad2deg(sample.osim_pred.motion[::10,1:3]))
 	print("KNEE Left:",np.rad2deg(sample.osim_pred.motion[::10,10]))
 	print("TIME:",sample.osim_pred.motion[::10,0])
-	sample.osim_pred.vertices[:,:,2] -= 1	
+	# sample.osim_pred.vertices[:,:,2] -= 1	
 	sample.osim_pred_file = retrieval_path
 
 	return sample
@@ -560,17 +589,18 @@ def render_dataset(sample_path=None):
 	for subject in os.listdir(INPUT_DIR):
 		for trial_path in os.listdir(os.path.join(INPUT_DIR,subject,'MarkerData')):
 			trial_path = os.path.join(INPUT_DIR,subject,'MarkerData',trial_path)
-			render_smpl(trial_path, sample_path, vis,video_dir=video_dir)
+			retrieval_path = os.path.join(INPUT_DIR,subject,'MarkerData',trial_path)
+			render_smpl(trial_path, retrieval_path, vis,video_dir=video_dir)
 
 
 if __name__ == "__main__": 
 
-	if len(sys.argv) == 1: 
+	if len(sys.argv) == 0: # Skipping for now. Will fix later to generate videos   
 		render_dataset()
 	else:
-		trial_path = sys.argv[1] if len(sys.argv) > 0 else "Temporal_Generation_Data/000cffd9-e154-4ce5-a075-1b4e1fd66201/MarkerData/sqt01.trc"
-		retrieval_path = sys.argv[2] if len(sys.argv) > 1 else "MCS_DATA/mot_visualization/normal_latents_temporal_consistency/entry_3.mot"
+		trial_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(DATA_DIR,"Data/015b7571-9f0b-4db4-a854-68e57640640d/MarkerData/SQT01.trc")
+		retrieval_path = sys.argv[2] if len(sys.argv) > 2 else os.path.join(DATA_DIR, "Data/015b7571-9f0b-4db4-a854-68e57640640d/OpenSimData/Dynamics/SQT01_segment_1/kinematics_activations_SQT01_segment_1_torque_driven.mot")
 		vis = Visualizer()
-		video_dir = sys.argv[3] if len(sys.argv) > 2 else None
+		video_dir = sys.argv[3] if len(sys.argv) > 3 else None
 		render_smpl(trial_path, retrieval_path,vis,video_dir)
 
