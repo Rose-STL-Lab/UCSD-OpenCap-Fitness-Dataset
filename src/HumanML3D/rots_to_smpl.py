@@ -20,7 +20,7 @@ sys.path.append
 parent_dir = os.path.join(os.path.dirname(__file__), '..')
 sys.path.append(parent_dir)
 
-from utils import *
+from utils import DATA_DIR, SMPL_DIR
 
 
 
@@ -380,6 +380,69 @@ def load_mcs_scores(csv_path):
 
     return mcs_scores
 
+
+def process_session(mode, session_id): 
+    
+    print(f"Processing {session_id} in {mode} mode")
+    
+    save_dir1 = os.path.join(DATA_DIR, 'HumanML3D', mode , "new_joints/")
+    save_dir2 = os.path.join(DATA_DIR, 'HumanML3D', mode ,  "new_joints_vecs/")
+    save_dir3 = os.path.join(DATA_DIR, 'HumanML3D', mode ,  "original_texts/")
+    save_dir4 = os.path.join(DATA_DIR, 'HumanML3D', mode ,  "mot_data/")
+    mcs_dir = os.path.join(DATA_DIR, 'HumanML3D', mode ,  "mcs")
+
+    os.makedirs(mode,exist_ok=True)
+    os.makedirs(save_dir1,exist_ok=True)
+    os.makedirs(save_dir2,exist_ok=True)
+    os.makedirs(save_dir3,exist_ok=True)
+    os.makedirs(save_dir4,exist_ok=True)
+    os.makedirs(mcs_dir,exist_ok=True)
+
+
+    # Load segments data
+    segment_file = os.path.join(DATA_DIR,'squat-segmentation-data', session_id + '.npy')
+
+    assert os.path.exists(segment_file), f"Segment file {segment_file} does not exist"
+    
+    segments = np.load(segment_file, allow_pickle=True).item()
+
+    # Get SMPL Parameters
+    from dataloader import OpenCapDataLoader
+    
+    for trial_name in segments: 
+        label,recordAttempt_str,recordAttempt = OpenCapDataLoader.get_label(trial_name + '.trc')
+        # Get SMPL Parameters
+        smpl_pkl_files = os.path.join(DATA_DIR, 'SMPL' , session_id + '_' + label + '_' + str(recordAttempt) + '.pkl')
+
+        try: 
+            assert os.path.exists(smpl_pkl_files), f"SMPL file {smpl_pkl_files} does not exist" 
+
+        
+            smpl_data = joblib.load(open(smpl_pkl_files,"rb"))
+            
+            for i, segment in enumerate(segments[trial_name]):
+                start_frame, end_frame = segment
+                pose_seq_np = smpl_data["joints"][start_frame:end_frame]
+                rots_axisangle = smpl_data["pose_params"][start_frame:end_frame]
+                h3d_format = rots_to_h3d(rots_axisangle, pose_seq_np)
+                rec_ric_data = recover_from_ric(torch.from_numpy(h3d_format).unsqueeze(0).float(), joints_num)
+        
+                np.save(pjoin(save_dir1, session_id + '_' + trial_name + '_' + str(i) + ".npy"), rec_ric_data.squeeze().numpy())
+                np.save(pjoin(save_dir2, session_id + '_' + trial_name + '_' + str(i) + ".npy"), h3d_format)
+            
+            
+                act = action_to_desc['SQT']
+                with open(pjoin(save_dir3, session_id + '_' + trial_name + '_' + str(i) + ".txt"),'w') as f:
+                    f.write(act)
+        
+        
+        except Exception as e:
+            print("Error in processing SMPL file", e)
+            continue
+
+        
+
+
 if __name__ == "__main__":
     text = "text"
     action_to_desc = {
@@ -397,51 +460,56 @@ if __name__ == "__main__":
         "LSLS":"left single leg squat",
         "PU":"push up"
     }
-    pkl_data = joblib.load(open(os.path.join(DATA_DIR,"pkl","mcs_data_v3.pkl"),"rb"))
-    for k,v in pkl_data.items():
-        try:
-            print(k,v.shape)
-        except:
-            print(k,len(v))
+    
+    # pkl_data = joblib.load(open(os.path.join(DATA_DIR,"pkl","mcs_data_v3.pkl"),"rb"))
+    # for k,v in pkl_data.items():
+    #     try:
+    #         print(k,v.shape)
+    #     except:
+    #         print(k,len(v))
+    
+
+    # file_set = read_file_to_list(mode + ".txt")
+    # for i,(rots_axisangle, pose_seq_np, label, subject_id, mot) in tqdm(enumerate(zip(pkl_data["poses"], pkl_data["joints_3d"],pkl_data["label"],pkl_data["subject_id"],pkl_data["mot"]))):
+    #     if subject_id not in file_set:
+    #         continue
+    #     h3d_format = rots_to_h3d(rots_axisangle, pose_seq_np)
+    #     rec_ric_data = recover_from_ric(torch.from_numpy(h3d_format).unsqueeze(0).float(), joints_num)
+    #     action = next(k for k,v in pkl_data["label_dict"].items() if v==label)
+    #     if action.upper() not in action_to_desc:
+    #         continue
+    #     np.save(pjoin(save_dir1, str(i)+".npy"), rec_ric_data.squeeze().numpy())
+    #     np.save(pjoin(save_dir2, str(i)+".npy"), h3d_format)
+        
+        
+    #     act = action_to_desc[action.upper()]
+    #     with open(save_dir3+str(i)+".txt",'w') as f:
+    #         f.write(act)
+
+    #     if subject_id in mcs_scores and action in mcs_scores[subject_id] and mcs_scores[subject_id][action] is not None: 
+    #         with open(mcs_dir+str(i)+".txt",'w') as f:
+    #             f.write(str(mcs_scores[subject_id][action]))   
+
+    #     # if subject_id in mcs_scores
+        
+    #     np.save(pjoin(save_dir4, str(i)+".npy"), mot)
+
+    
     
     mcs_scores = load_mcs_scores(os.path.join(DATA_DIR,'mcs.csv'))
-    mode = "eval"
-    save_dir1 = mode + "/new_joints/"
-    save_dir2 = mode +  "/new_joints_vecs/"
-    save_dir3 = mode +  "/original_texts/"
-    save_dir4 = mode +  "/mot_data/"
-    mcs_dir = mode +  "/mcs/"
+
+    modes = ["train","eval"]
+
+    for mode in modes:
+        
+
+        for segment_file in os.listdir(os.path.join(DATA_DIR,'squat-segmentation-data')):
+            segment_name = segment_file.split(".")[0]
+            if mode == 'eval' and segment_name in mcs_scores:
+                process_session(mode, segment_name)
+            
+            elif mode == 'train' and segment_name not in mcs_scores:
+                process_session(mode, segment_name)
+
+
     
-    os.makedirs(mode,exist_ok=True)
-    os.makedirs(save_dir1,exist_ok=True)
-    os.makedirs(save_dir2,exist_ok=True)
-    os.makedirs(save_dir3,exist_ok=True)
-    os.makedirs(save_dir4,exist_ok=True)
-    os.makedirs(mcs_dir,exist_ok=True)
-
-
-    file_set = read_file_to_list(mode + ".txt")
-
-    for i,(rots_axisangle, pose_seq_np, label, subject_id, mot) in tqdm(enumerate(zip(pkl_data["poses"], pkl_data["joints_3d"],pkl_data["label"],pkl_data["subject_id"],pkl_data["mot"]))):
-        if subject_id not in file_set:
-            continue
-        h3d_format = rots_to_h3d(rots_axisangle, pose_seq_np)
-        rec_ric_data = recover_from_ric(torch.from_numpy(h3d_format).unsqueeze(0).float(), joints_num)
-        action = next(k for k,v in pkl_data["label_dict"].items() if v==label)
-        if action.upper() not in action_to_desc:
-            continue
-        np.save(pjoin(save_dir1, str(i)+".npy"), rec_ric_data.squeeze().numpy())
-        np.save(pjoin(save_dir2, str(i)+".npy"), h3d_format)
-        
-        
-        act = action_to_desc[action.upper()]
-        with open(save_dir3+str(i)+".txt",'w') as f:
-            f.write(act)
-
-        if subject_id in mcs_scores and action in mcs_scores[subject_id] and mcs_scores[subject_id][action] is not None: 
-            with open(mcs_dir+str(i)+".txt",'w') as f:
-                f.write(str(mcs_scores[subject_id][action]))   
-
-        # if subject_id in mcs_scores
-        
-        np.save(pjoin(save_dir4, str(i)+".npy"), mot)
