@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  namespace: spatiotemporal-decision-making
+  name: digital-coach
+spec:
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 1
+          preference:
+            matchExpressions:
+            - key: nautilus.io/group
+              operator: In
+              values:
+              - ry
+  tolerations:
+  - key: "nautilus.io/ry-reservation"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
+  imagePullSecrets:
+    - name: shubh-gitlab-registry
+  containers:
+  - name: shubh-container
+    image: gitlab-registry.nrp-nautilus.io/shmaheshwari/digital-coach-anwesh:latest
+    imagePullPolicy: Always
+    command: ["/bin/bash", "-c"]
+    args: 
+    - | 
+      conda init bash 
+      source ~/.bashrc
+      source /root/.bashrc
+
+      conda activate T2M-GPT
+      pip install tqdm 
+      conda run -n T2M-GPT pip install tqdm
+
+      # Link the data folder to the mounted data folder
+      cd /T2M-GPT
+      git -c http.sslVerify=false  pull origin main
+
+
+      ln -sf /mnt/data/MCS_DATA/Data Data
+
+      export PYTHONUNBUFFERED=1
+
+      conda run -n T2M-GPT python surrogate_training.py 
+
+      sleep 10000
+
+    volumeMounts:
+    - mountPath: /dev/shm
+      name: dshm
+    - mountPath: /mnt/data
+      name: sports-analytics-database
+    resources:
+      limits:
+        nvidia.com/gpu: "1"
+        memory: "30Gi"
+        cpu: "8"
+      requests:
+        nvidia.com/gpu: "1"
+        memory: "20Gi"
+        cpu: "4"
+  volumes:
+  - name: dshm
+    emptyDir:
+      medium: Memory
+  - name: sports-analytics-database
+    persistentVolumeClaim:
+      claimName: sports-analytics-database
+  restartPolicy: Never

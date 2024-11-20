@@ -126,7 +126,7 @@ def is_pod_running(pod_name):
     return False
 
 def create_yamls():
-    for subject_file in os.listdir(subject_dir)[:80]:
+    for subject_file in os.listdir(subject_dir):
         subject_id = os.path.splitext(subject_file)[0]
         create_pod_yaml(subject_id)
 
@@ -143,7 +143,7 @@ def run_pods():
 
 
 def delete_pods():
-    for subject_file in os.listdir(subject_dir)[:80]:
+    for subject_file in os.listdir(subject_dir):
         subject_id = os.path.splitext(subject_file)[0]
         pod_name = f"muscle-simulation-pod-{subject_id}"
         subprocess.run(["kubectl", "delete", "pod", pod_name, "-n", namespace])
@@ -158,7 +158,7 @@ def is_pod_completed(pod_name):
     return False
 
 def delete_completed_pods():
-    for subject_file in os.listdir(subject_dir)[:80]:
+    for subject_file in os.listdir(subject_dir):
         subject_id = os.path.splitext(subject_file)[0]
         pod_name = f"muscle-simulation-pod-{subject_id}"
         if is_pod_completed(pod_name):
