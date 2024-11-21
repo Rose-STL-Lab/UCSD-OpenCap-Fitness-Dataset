@@ -2,6 +2,9 @@
 data
 MCS_DATA
 
+pdfs
+*.pdf
+
 # VS-Code
 .vscode
 
