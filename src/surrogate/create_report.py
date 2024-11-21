@@ -30,8 +30,9 @@ parser = argparse.ArgumentParser(description='Create report on the surrogate res
 parser.add_argument('--surrogates', nargs='+', help='List of surrogate results. Note: Sort by preference. Last experiment given red color', required=True)
 parser.add_argument('--name', help='Name of the report', default="MCS-Surrogate.pdf")
 parser.add_argument('--pdfs', help='Directory to store pdfs', default="pdfs")
-parser.add_argument('--isMCS', dest='isMCS', action='store_true', help='Flag to indicate if MCS scores are present')
 parser.add_argument('--no-isMCS', dest='isMCS', action='store_false', help='Flag to indicate if MCS scores are present')
+parser.add_argument('--isMCS', dest='isMCS', action='store_true', help='Flag to indicate if MCS scores are present')
+
 
 args = parser.parse_args()
 
