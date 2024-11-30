@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import plotly
 import numpy as np
+import argparse
 
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -17,20 +18,38 @@ from startStopDetection import temporal_segementation, time_normalization
 
 
 # MCS_PATH ='/data/panini/MCS_DATA/'
-MCS_PATH = '/media/shubh/Elements/RoseYu/UCSD-OpenCap-Fitness-Dataset/MCS_DATA'
+MCS_PATH = ['/media/shubh/Elements/RoseYu/UCSD-OpenCap-Fitness-Dataset/MCS_DATA', '/data/panini/MCS_DATA/', '/mnt/data/MCS_DATA/']
+for mcs_path in MCS_PATH:
+    if os.path.exists(mcs_path):
+        MCS_PATH = mcs_path
+        break
+
 data_path = os.path.join(MCS_PATH, 'Data')
-isMCS = True
-pdf_dir = "pdfs"
-report_name = "MCS-Surrogate.pdf"
+
+parser = argparse.ArgumentParser(description='Create report on the surrogate results. Usage: ')
+parser.add_argument('--surrogates', nargs='+', help='List of surrogate results. Note: Sort by preference. Last experiment given red color', required=True)
+parser.add_argument('--name', help='Name of the report', default="MCS-Surrogate.pdf")
+parser.add_argument('--pdfs', help='Directory to store pdfs', default="pdfs")
+parser.add_argument('--no-isMCS', dest='isMCS', action='store_false', help='Flag to indicate if MCS scores are present')
+parser.add_argument('--isMCS', dest='isMCS', action='store_true', help='Flag to indicate if MCS scores are present')
+
+
+args = parser.parse_args()
+
+isMCS = args.isMCS
+report_name = args.name
+pdf_dir = args.pdfs
+
+print(f"Creating report:{report_name} in directory:{pdf_dir} isMCS:{isMCS}")
+
 os.makedirs(pdf_dir,exist_ok=True)
 
+# 
+# surrogate_results_list = ["transformer_surrogate_v3_activations"] 
 
-# Sort by preference. Last experiment given red color
-surrogate_results_list = ["transformer_surrogate_activations", "transformer_surrogate_model_v2_activations_v2"] 
-
-
+surrogate_results_list = args.surrogates
 surrogate_results_list = [surrogate_result if os.path.exists(surrogate_result) else os.path.join(MCS_PATH, surrogate_result) for surrogate_result in surrogate_results_list] 
-assert all([os.path.exists(surrogate_result) for surrogate_result in surrogate_results_list]), "All surrogate results should exist"
+assert all([os.path.exists(surrogate_result) for surrogate_result in surrogate_results_list]), f"All surrogate results should exist:{[os.path.exists(surrogate_result) for surrogate_result in surrogate_results_list]}"
 
 
 
@@ -45,7 +64,7 @@ PPE_Subjects = dict(zip(mcs_sessions,PPE_Subjects))
 if not isMCS:
     mcs_sessions = os.listdir(data_path)
 
-    subject2opencap = pd.read_table('/data/panini/MCS_DATA/subject2opencap.txt',sep=',')
+    subject2opencap = pd.read_table(os.path.join(MCS_PATH, 'subject2opencap.txt'),sep=',')
     PPE_Subjects = dict(zip( subject2opencap[' OpenCap-ID'].tolist(), subject2opencap['PPE'].tolist()))
 
     for session in PPE_Subjects:
@@ -435,8 +454,18 @@ manual_segments = {}
 #         manual_segments["2345d831-6038-412e-84a9-971bc04da597"]["SQT01_segment_1"][0][0] += 40 
 ##########################################################
 aggregate_data = {}
-mcs_aggregate_data = {2:{}, 3:{}, 4:{}}
-# mcs_aggregate_data = {2:{}, 3:{}, 4:{}, 0:{}, -1:{}}
+if isMCS:
+    mcs_aggregate_data = {2:{}, 3:{}, 4:{}}
+else: 
+    mcs_aggregate_data = {2:{}, 3:{}, 4:{}, 0:{}, -1:{}}
+
+## Need to compute R2 values for each surrogate result
+R2 = {'total_predictions':0, 'SST':np.zeros((0,len(page_dict))),  'SSE':{}}
+for surrogate_result in ['ground_truth'] + surrogate_results_list:
+    surrogate_result = os.path.basename(surrogate_result)
+    R2['SSE'][surrogate_result] = np.zeros((0,len(page_dict)))
+    
+
 for plotting_variable in ['kinematics','kinetics']:
     aggregate_data[plotting_variable] = {}
     aggregate_data[plotting_variable]['mean'] = np.zeros((len(plot_names_mapping),101))
@@ -541,11 +570,27 @@ for subject_ind, subject_name in tqdm.tqdm(enumerate(subjects)):
                 plot_data[plotting_variable].extend(time_normalized_series)
 
             elif 'muscle_activations' in plotting_variable:
+
+                ### Also compute R2 values for each surrogate result on unsegmented data
+                valid_timesteps = plot_data_trial[plotting_variable]['ground_truth'].shape[0]
+
+
+
+                R2['SST']  = np.concatenate([R2['SST'],
+                                             plot_data_trial[plotting_variable]['ground_truth'][:valid_timesteps]],axis=0)
+                R2['total_predictions'] += valid_timesteps
+
+
+                ### Update plottin data for muscle activations
                 for muscle_activation in plot_data_trial[plotting_variable]:
                     assert len(plot_data_trial[plotting_variable][muscle_activation].shape) == 2, "Data should be 2D"
+
+                    surrogate_timesteps = min([plot_data_trial[plotting_variable][muscle_activation].shape[0],valid_timesteps])
+
+                    SSE = (plot_data_trial[plotting_variable][muscle_activation][:surrogate_timesteps] - plot_data_trial[plotting_variable]['ground_truth'][:surrogate_timesteps])**2
+                    R2['SSE'][muscle_activation] = np.concatenate([R2['SSE'][muscle_activation],SSE],axis=0)
+
                     time_normalized_series = [time_normalization(plot_data_trial[plotting_variable][muscle_activation][segment[0]:segment[1]]) for segment in segments if segment[1] > segment[0] ] 
-
-
                     if plotting_variable not in plot_data:
                         plot_data[plotting_variable] = {}
                         
@@ -553,6 +598,12 @@ for subject_ind, subject_name in tqdm.tqdm(enumerate(subjects)):
                         plot_data[plotting_variable][muscle_activation] = []
 
                     plot_data[plotting_variable][muscle_activation].extend(time_normalized_series)
+
+
+
+
+
+
 
     if len(plot_data) == 0: # Tracks are empty  
         continue
@@ -674,28 +725,29 @@ for mcs_score in mcs_aggregate_data:
                 mcs_aggregate_data[mcs_score][plotting_variable][muscle_activation]['mean'] /= total_trials
                 mcs_aggregate_data[mcs_score][plotting_variable][muscle_activation]['std'] = np.sqrt(mcs_aggregate_data[mcs_score][plotting_variable][muscle_activation]['std']/total_trials - mcs_aggregate_data[mcs_score][plotting_variable][muscle_activation]['mean']**2)
 
-# In[11]:
+
+############# Compute R2 values for each surrogate result
+R2_mean = np.mean(R2['SST'],axis=0,keepdims=True)
+R2_SST = np.sum( (R2['SST'] - R2_mean)**2  ,axis=0)
+
+R2['R2'] = {}
+R2['RMSE'] = {}
+for surrogate_result in R2['SSE']:
+    R2['SSE'][surrogate_result] = np.sum(R2['SSE'][surrogate_result],axis=0)
+    R2['R2'][surrogate_result] = 1 - R2['SSE'][surrogate_result]/R2_SST
+
+    R2['RMSE'][surrogate_result] = np.sqrt(R2['SSE'][surrogate_result]/R2['total_predictions'])
+
+    results = list(zip(page_dict.values(),R2['R2'][surrogate_result]))
+    print(f"R2 Surrogate:{surrogate_result}")
+    for muscle in results:
+        print(f"{muscle[0]}:{muscle[1]:.3f}")
 
 
 mcs_scores
-
-
-# In[12]:
-
-
 plot_data.keys()
 
-
-# In[13]:
-
-
 assert plot_headers is not None, "Something went wrong. Headers should not be None"
-
-
-# # Plot Aggregate values
-
-# In[ ]:
-
 
 from matplotlib.pyplot import plot
 
@@ -999,7 +1051,7 @@ mcs_aggregate_data[mcs_score].keys()
 from compile_report import pdf_compiler
 
 
-pdf_compiler(pdf_path=pdf_dir, report_name=report_name, PPE_Subjects=PPE_Subjects, mcs_scores=mcs_scores)
+pdf_compiler(pdf_path=pdf_dir, report_name=report_name, PPE_Subjects=PPE_Subjects, mcs_scores=mcs_scores, isMCS=args.isMCS)
 
 # Plot the subject info
 for mcs_score in mcs_aggregate_data:
@@ -1012,3 +1064,8 @@ for mcs_score in mcs_aggregate_data:
 
 
 
+for surrogate_result in R2['SSE']:
+    results = list(zip(page_dict.values(),R2['R2'][surrogate_result],R2['RMSE'][surrogate_result]))
+    print(f"Metrics: Surrogate:{surrogate_result}, R2, RMSE")
+    for muscle in results:
+        print(f"{muscle[0]},{muscle[1]:.3f},{muscle[2]:.3f}")

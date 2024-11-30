@@ -1,6 +1,10 @@
 # DATA DIR
+render
 data
 MCS_DATA
+
+pdfs
+*.pdf
 
 # VS-Code
 .vscode

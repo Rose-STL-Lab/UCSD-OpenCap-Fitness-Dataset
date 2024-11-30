@@ -2,7 +2,7 @@ import os
 import glob
 from pypdf import PdfWriter
 
-def pdf_compiler(pdf_path="pdfs", report_name="MCS-Surrogate.pdf", PPE_Subjects={}, mcs_scores={}):
+def pdf_compiler(pdf_path="pdfs", report_name="MCS-Surrogate.pdf", PPE_Subjects={}, mcs_scores={},isMCS=True):
     pdfs = os.listdir(pdf_path)
 
     pdfs = sorted(pdfs)
@@ -30,22 +30,24 @@ def pdf_compiler(pdf_path="pdfs", report_name="MCS-Surrogate.pdf", PPE_Subjects=
         
     PPE_Subjects2session = {v:k for k,v in PPE_Subjects.items()}
 
-    # Remove individual plots for non mcs scores
-    keep_indices = []
-    for i in range(len(pdfs)):
-        name = pdfs[i].split("_")[0]
-        if name in PPE_Subjects2session: 
-            # print(f"Checking:{name}")
-            if PPE_Subjects2session[name] in mcs_scores and mcs_scores[PPE_Subjects2session[name]] > 1:
-                # print(f"keep_indices:{name} MCS:{mcs_scores[PPE_Subjects2session[name]]}")
-                keep_indices.append(i)
-            else: 
-                continue
-        elif "subject" in pdfs[i]:
-            keep_indices.append(i)
-        
+    if isMCS:
 
-    pdfs = [pdfs[i] for i in keep_indices]
+        # Remove individual plots for non mcs scores
+        keep_indices = []
+        for i in range(len(pdfs)):
+            name = pdfs[i].split("_")[0]
+            if name in PPE_Subjects2session: 
+                # print(f"Checking:{name}")
+                if PPE_Subjects2session[name] in mcs_scores and mcs_scores[PPE_Subjects2session[name]] > 1:
+                    # print(f"keep_indices:{name} MCS:{mcs_scores[PPE_Subjects2session[name]]}")
+                    keep_indices.append(i)
+                else: 
+                    continue
+            elif "subject" in pdfs[i]:
+                keep_indices.append(i)
+            
+
+        pdfs = [pdfs[i] for i in keep_indices]
 
     merger = PdfWriter()
 
@@ -54,3 +56,7 @@ def pdf_compiler(pdf_path="pdfs", report_name="MCS-Surrogate.pdf", PPE_Subjects=
 
     merger.write(report_name)
     merger.close()
+
+
+if __name__ == "__main__":    
+    pdf_compiler(pdf_path="pdfs", report_name="MCS-Surrogate.pdf", PPE_Subjects={}, mcs_scores={})
