@@ -114,6 +114,21 @@ def load_mot(osim, mot_file, start_frame=None, end_frame=None, fps_out: int=None
     return motion
 
 
+from scipy.interpolate import CubicSpline
+
+
+def time_normalization(time_series,duration=101): 
+
+    orig_time_space = np.linspace(0,1,len(time_series))
+        
+    spline = CubicSpline(orig_time_space, time_series)
+
+    spline_input = np.linspace(0,1,duration)
+    split_output = spline(spline_input)
+            
+    return split_output
+
+
 class OSIMSequence():
     """
     Represents a temporal sequence of OSSO poses. Can be loaded from disk or initialized from memory.
@@ -172,6 +187,19 @@ class OSIMSequence():
         # Nodes
         self.vertices, self.faces, self.marker_trajectory, self.joints, self.joints_ori = self.fk()
         
+        #### Clamp the lowest point of the mesh (median across timeseries) to the ground
+        clamp = True
+        if clamp: 
+            lowest_point_location = np.median(np.min(self.vertices,axis=1)[:,1])
+            closest_index = np.argmin(self.vertices[:,:,1] - lowest_point_location)
+            closest_index = np.unravel_index(closest_index, self.vertices[:,:,1].shape)
+            closest_vertex_ind = closest_index[1]
+
+            translation = -self.vertices[:,closest_vertex_ind,:]
+            self.motion[:,3:6] += translation
+
+            self.vertices, self.faces, self.marker_trajectory, self.joints, self.joints_ori = self.fk()
+
         # TODO: fix that. This triggers a segfault at destruction so I hardcode it
         # self.joints_labels = [J.getName() for J in self.osim.skeleton.getJoints()]
         # self.joints_labels = ['ground_pelvis', 'hip_r', 'walker_knee_r', 'ankle_r', 'subtalar_r', 'mtp_r', 'hip_l', 'walker_knee_l', 'ankle_l', 'subtalar_l', 'mtp_l', 'back', 'neck', 'acromial_r', 'elbow_r', 'radioulnar_r', 'radius_hand_r', 'acromial_l', 'elbow_l', 'radioulnar_l', 'radius_hand_l']
@@ -359,12 +387,16 @@ class OSIMSequence():
 
         motion = np.array(mot.poses.T)    
 
+
         # print("Mot Data:",motion)
 
         # Crop and sample
         sf = start_frame or 0
         ef = end_frame or motion.shape[0]
         motion = motion[sf:ef]
+
+
+        motion = time_normalization(motion,duration=196)
 
         # estimate fps_in
         ts = np.array(mot.timestamps)   
