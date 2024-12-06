@@ -205,7 +205,7 @@ class Visualizer:
 					# extrinsics = ps.CameraExtrinsics(mat=np.eye(4))
 					extrinsics = ps.CameraExtrinsics(root=camera['position'], look_dir=camera['look_dir'], up_dir=camera['up_dir'])
 					params = ps.CameraParameters(intrinsics, extrinsics)
-					ps_cam = ps.register_camera_view(f"Cam{i}", params)
+					ps_cam = ps.register_camera_view(f"Cam{i}", params,enabled=False)
 					# print("Camera:",params.get_view_mat())
 					ps_cams.append(ps_cam)
 
@@ -223,52 +223,87 @@ class Visualizer:
 				self.ps_data['ps_cams'] = ps_cams
 
 
-			
-			shift_x = sample_ind - len(samples)//2
-			shift_x = -self.ps_data['bbox'][0]*shift_x*4
-			# shift_x = -1.5*shift_x
+			T = 150 if "FinalFinalHigh" in sample.osim_file else len(sample.osim.vertices)
+			step_siz = T//7
+			num_samples = list(range(0,T,step_siz))
 
-			biomechanical = sample.osim.vertices + np.array([shift_x,0,0.0])*self.ps_data['bbox']
-			biomechanical_joints = sample.osim.joints + np.array([shift_x,0,0.0])*self.ps_data['bbox']
-
-
-
-			print("Shift x:",shift_x)
-
-			rot_x = 0 
-			rot_y = 90 if "t2m" in sample.osim_file or "mdm" in sample.osim_file else 0 
-			rot_z = 0 
-
-
-			R = sRotation.from_euler('xyz',[rot_x,rot_y,rot_z],degrees=True).as_matrix()
-
-			biomechanical = (biomechanical  - biomechanical.mean((0,1),keepdims=True))@R.T + biomechanical.mean((0,1),keepdims=True) 
-			biomechanical_joints = (biomechanical_joints  - biomechanical_joints.mean((0,1),keepdims=True) )@R.T + biomechanical_joints.mean((0,1),keepdims=True)
-
-
-			self.ps_data['biomechanical'].append(biomechanical)
-			self.ps_data['biomechanical_joints'].append(biomechanical_joints)
-
-
-
-
+			hip_joints = []
 			name = os.path.basename(sample.osim_file).split('.')[0]
-			ps_biomechanical = ps.register_surface_mesh(f"{sample_ind}-{name} mesh",biomechanical[0],sample.osim.faces,transparency=0.5,color=np.array([127,127,255])/255,smooth_shade=True,material='wax')
-			ps_biomechanical_joints = ps.register_point_cloud(f"{sample_ind}-{name} joints",biomechanical_joints[0],color=np.array([0,0,0]))
+			for t in num_samples:
+			
+				shift_x = t//step_siz - len(num_samples)//2
+				shift_x = shift_x*1.2
 
-			edges = np.array([ [i,i+1] for i in range(biomechanical_joints.shape[0]-1)] + [[biomechanical_joints.shape[0]-1,0]]) 
+				print(t, shift_x)
 
-			ps_com_curve = ps.register_curve_network(f"{sample_ind}-{name} com",biomechanical_joints[:,[1,6]].mean(axis=1),edges,color=np.array([255,255,0])/255)
-
-			self.ps_data['ps_biomechanical_list'].append(ps_biomechanical)
-			self.ps_data['ps_biomechanical_joints_list'].append(ps_biomechanical_joints)	
+				biomechanical_joints = sample.osim.joints[t]
+				biomechanical_joints[:,0] += shift_x
 
 
-			# Find the timestep with knee flexion and set it as the initial timestep
-			deepest_squat_index = biomechanical_joints[:,0,1].argmin()
+				rot_x = 0 
+				rot_y = 90 if "t2m" in sample.osim_file or "mdm" in sample.osim_file else 0 
+				rot_z = 0 
 
-			self.ps_data['ps_biomechanical_list'][-1].update_vertex_positions(biomechanical[deepest_squat_index])
-			self.ps_data['ps_biomechanical_joints_list'][-1].update_point_positions(biomechanical_joints[deepest_squat_index])
+
+				R = sRotation.from_euler('xyz',[rot_x,rot_y,rot_z],degrees=True).as_matrix()
+
+				biomechanical_joints = (biomechanical_joints  - biomechanical_joints.mean(0,keepdims=True))@R.T + biomechanical_joints.mean(0,keepdims=True) 
+
+
+				hip_joint = biomechanical_joints[1,:]
+				hip_joints.append(hip_joint)
+
+			hip_joints = np.array(hip_joints)
+			edges = np.array([ [i,i+1] for i in range(hip_joints.shape[0]-1)])
+
+			ps_com_curve = ps.register_curve_network(f"{sample_ind}-{name} com",hip_joints,edges,color=np.array([255,255,0])/255,radius=1e-3,enabled=True)
+
+
+			for t in num_samples:
+			
+				shift_x = t//step_siz - len(num_samples)//2
+				shift_x = shift_x*1.2
+
+				print(t, shift_x)
+
+				# print(self.ps_data['bbox'].shape)
+				# print(np.array([[shift_x,0,0.0]]).shape)
+				# print((np.array([[shift_x,0,0.0]])*self.ps_data['bbox']).shape)
+
+				# biomechanical = sample.osim.vertices[t] + np.array([[shift_x,0,0.0]])*self.ps_data['bbox']
+				biomechanical = sample.osim.vertices[t].copy()
+				biomechanical[:,0] += shift_x
+
+				rot_x = 0 
+				rot_y = 90 if "t2m" in sample.osim_file or "mdm" in sample.osim_file else 0 
+				rot_z = 0 
+
+
+				R = sRotation.from_euler('xyz',[rot_x,rot_y,rot_z],degrees=True).as_matrix()
+
+				biomechanical = (biomechanical  - biomechanical.mean(0,keepdims=True))@R.T + biomechanical.mean(0,keepdims=True) 
+
+
+
+				self.ps_data['biomechanical'].append(biomechanical)
+
+
+
+				ps_biomechanical = ps.register_surface_mesh(f"{t}-{name} mesh",biomechanical,sample.osim.faces,transparency=0.5,color=np.array([127,127,255])/255,smooth_shade=True,material='wax',enabled=True)
+
+
+
+
+				self.ps_data['ps_biomechanical_list'].append(ps_biomechanical)
+			
+
+
+
+			# # Find the timestep with knee flexion and set it as the initial timestep
+			# deepest_squat_index = biomechanical_joints[:,0,1].argmin()
+
+			# self.ps_data['ps_biomechanical_list'][-1].update_vertex_positions(biomechanical[deepest_squat_index])
+			# self.ps_data['ps_biomechanical_joints_list'][-1].update_point_positions(biomechanical_joints[deepest_squat_index])
 
 
 			# Map all the rendering information
@@ -306,12 +341,13 @@ class Visualizer:
 		# Take a screenshot of the initial setup 
 		ps.show()
 		if video_name is not None:
-			image_path = video_name.replace('.mp4', "_initial.png")
+			image_path = video_name.replace('.mp4', "_series.png")
 			# print(f"Saving plot to :{image_path}")	
 			ps.set_screenshot_extension(".png")
 			ps.screenshot(image_path,transparent_bg=True) 
 
 
+		os._exit(0)
 
 
 
@@ -595,6 +631,7 @@ if __name__ == "__main__":
 				sample = load_retrived_samples(session,file_path)
 
 				samples.append(sample)
+			break
 		vis = Visualizer()
 		video_name = None
 		video_name = sys.argv[-1] if sys.argv[-1].endswith('mp4') else None

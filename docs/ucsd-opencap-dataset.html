@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="description"
-        content="BIGE : Biomechanics-informed GenAI for Exercise Science">
+        content="Style-based controllable motion generation">
   <meta name="keywords" content="Generative AI, Stable diffusio, Animation">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Permissions-Policy" content="interest-cohort=()">
 
-  <title>BIGE : Biomechanics-informed GenAI for Exercise Science</title>
+  <title>Style-based controllable motion generation</title>
 
   <!-- Global site tag (gtag.js) - Google Analytics -->
 <!--   <script async src="https://www.googletagmanager.com/gtag/js?id=G-PYVRSFMDRL"></script>
@@ -50,39 +50,23 @@
     <div class="container is-max-desktop">
       <div class="columns is-centered">
         <div class="column has-text-centered">
-          <h1 class="title is-1 publication-title">BIGE : Biomechanics-informed GenAI for Exercise Science</h1>
+          <h1 class="title is-1 publication-title">Style-based controllable motion generation</h1>
           <div class="is-size-5 publication-authors">
+            <span class="author-block"><a href="https://www.linkedin.com/in/paninib">Panini Bhamidipati</a>,</span>
             <span class="author-block"><a href="https://shubhmaheshwari.github.io/">Shubh Maheshwari</a>,</span>
-            <span class="author-block"><a href="https://www.linkedin.com/in/anwesh-mohanty">Anwesh Mohanty</a>,</span>
-            <span class="author-block"><a href="https://www.linkedin.com/in/anwesh-mohanty">Yadi	Cao</a>,</span>
             <span class="author-block"><a href="https://roseyu.com/">Rose Yu</a></span>
           </div>
 
           <div class="is-size-5 publication-authors">
-            <span class="author-block">
-              &emsp; &emsp; &emsp;  Rose Spatio-Temporal Lab<sup>1</sup>, &emsp; &emsp; 
-            </span>
-            <span class="author-block">
-              Cardiac Mechanics Research Group <sup>2</sup>
-            </span>
-            <br>
-            <span class="author-block">
-              Department of Computer Science &emsp; &emsp;
-            </span>
-            <span class="author-block">
-              Department of Bioengineering 
-            </span>
-            <br>
-          </div>  
-          <div class="is-size-5 publication-authors">
-            <span class="author-block">University of California San Diego</span>
+            <span class="author-block">Department of Computer Science</span><br>
+            <span class="author-block">UC San Diego</span>
           </div>
 
           <div class="column has-text-centered">
             <div class="publication-links">
               <!-- PDF Link. -->
               <span class="link-block">
-                <a href="./static/pdfs/L4DC_2025_paper_177.pdf" 
+                <a href="" 
                    class="external-link button is-normal is-rounded is-dark">
                   <span class="icon">
                       <i class="fas fa-file-pdf"></i>
@@ -91,7 +75,7 @@
                 </a>
               </span>
               <span class="link-block">
-                <a href="./static/pdfs/Supplementary_L4DC_2025_paper_177.pdf" 
+                <a href="" 
                    class="external-link button is-normal is-rounded is-dark">
                   <span class="icon">
                       <i class="fas fa-file-pdf"></i>
@@ -101,12 +85,12 @@
               </span>
               <!-- Video Link. -->
               <span class="link-block">
-                <a href="https://docs.google.com/presentation/d/15Cpc11clPP0p72jBd7Zoe1e7_FpdCYRn3uXChIdGpzY/edit?usp=sharing" 
+                <a href="" 
                    class="external-link button is-normal is-rounded is-dark">
                   <span class="icon">
                       <i class="fa fa-solid fa-image"></i>
                   </span>
-                  <span>Slidies</span>
+                  <span>Poster</span>
                 </a>
               </span>
               <!-- Code Link. -->
@@ -121,7 +105,7 @@
               </span>
               <!-- Dataset Link. -->
               <span class="link-block">
-                <a href="./ucsd-opencap-dataset.html"  
+                <a href="#" onclick="alert('Coming soon')" 
                    class="external-link button is-normal is-rounded is-dark">
                   <span class="icon">
                       <i class="far fa-images"></i>
@@ -137,22 +121,15 @@
   </div>
 </section>
 
-
 <section class="hero teaser">
   <div class="container is-max-desktop">
     <div class="hero-body">
-      <!-- <video id="teaser" autoplay muted loop playsinline height="100%">
+      <video id="teaser" autoplay muted loop playsinline height="100%">
         <source src="./static/videos/demo.mp4"
                 type="video/mp4">
-      </video> -->
-      <img src="./static/images/Sports_Analytic_Mockup_1_V4.png"
-           class="interpolation-image"
-           alt="Interpolation end reference image."/>
-      
+      </video>
       <h2 class="subtitle has-text-centered">
-        <b> BIGE</b> is a framework for generative models to adhere to clinician-defined constraints. 
-        <br>
-        To generate realistic motion, our method uses a biomechanically informed surrogate model to guide the generation process.. 
+        A novel constraint composition for motion diffusion to recommend clinically optimal body poses.
       </h2>
     </div>
   </div>
@@ -182,36 +159,24 @@
       <div class="column is-four-fifths">
         <div class="content has-text-justified">
             
-
-
           <p>
-            Proper movements enhance mobility, coordination, and muscle activation, which are crucial for
-          performance, injury prevention, and overall fitness. However, traditional simulation tools rely
-          on strong modeling assumptions, are difficult to set up and computationally expensive. On the
-          other hand, generative AI approaches provide efficient alternatives to motion generation. But they
-          often lack physiological relevance and do not incorporate biomechanical constraints, limiting their
-          practical applications in sports and exercise science. To address these limitations. 
+            Recommending clinically optimal body motion can significantly improve an athlete's performance. The goal of our work is to suggest optimal body poses an athlete should perform. To distinguish between optimal and sub-optimal pose we use the Movement Competency Screen (MCS) to guide the generative model to produce motion with high fidelity and diversity. 
           </p>
 
           <ul>
             <li>
               <p>
-                We propose a novel framework, BIGE, that combines bio-mechanically meaningful scoring metrics with generative modeling.
+                We prosose a novel constraint composition formulation to incorporate multiple constraints like MCS Score and text prompt.  
               </p>
             </li>
             <li>
               <p>
-                BIGE integrates a differentiable surrogate model for muscle activation to reverse optimize the latent space of the generative model
+                Furthermore, we release a new dataset (OpenCap Dataset) encompassing more than 3000 high-quality human motion samples from 13 different primitive movements like Squats, Pull-ups, and Push-ups with their corresponding MCS Score labeled by experts.
               </p> 
             </li>
             <li>
               <p>
-               Enables the retrieval of physiologically valid motions through targeted search.
-               </p>
-            </li>
-            <li>
-              <p>
-                Through extensive experiments on squat exercise data, our framework demonstrates superior performance in generating diverse, physically plausible motions while maintaining high fidelity to clinician-defined objectives compared to existing approaches.
+                Our experiments show qualitative and quantitative improvement over baselines by incorporating constrain composition.
               </p>
             </li>
           </ul>
@@ -219,7 +184,7 @@
       </div>
     </div>
     <!--/ Abstract. -->
- 
+
     <!-- Paper video. -->
     <!-- <div class="columns is-centered has-text-centered">
       <div class="column is-four-fifths">
@@ -386,7 +351,7 @@
 </section>
 
 
-<!-- <section class="section">
+<section class="section">
   <div class="container is-max-desktop has-text-centered">
     <h2 class="title is-3"> Generating Style Tags </h2>
     <div class="content has-text-justified">
@@ -413,18 +378,20 @@
     </div>
   </div>
 
-</section> -->
+</section>
 
-<!-- 
+
 
 <section class="section hero">
   <div class="container is-max-desktop">
 
     <div class="columns is-centered">
+      <!-- Animation. -->
     <div class="columns is-centered">
       <div class="column is-full-width">
         <h2 class="title is-3 has-text-centered">Comparisions</h2>
 
+        <!-- Static. -->
         <h3 class="title is-4 has-text-centered">Constraint composition</h3>
         <div class="content has-text-justified">
           <img src="./static/images/kit-comparision.png"
@@ -432,7 +399,9 @@
                  alt="Interpolation end reference image."/>
         </div>
         <br/>
+        <!--/ Static. -->
 
+        <!-- Motion Skeleton. -->
         <h3 class="title is-4 has-text-centered"> Stylized generatation</h3>
         <div class="content has-text-justified">
           <img src="./static/images/opecap-comparision.png"
@@ -442,18 +411,19 @@
              Compared to motion skeleton extracted from other methods, by incorporating structural cues, ours is more effective at embedding skeleton from incomplete mesh sequence.
           </p>
         </div>
-
+        <!--/ Motion Skeleton. -->
       
     </div>
+    <!--/ Matting. -->
   </div>
-</section> -->
+</section>
 
 <section class="section  is-light" id="BibTeX">
   <div class="container is-max-desktop content">
     <h2 class="title">BibTeX</h2>
     <pre><code>@article{,
   author    = {Bhamidipati, Panini and Maheshwari, Shubh and Yu, Rose},
-  title     = {BIGE : Biomechanics-informed GenAI for Exercise Science},
+  title     = {Style-based controllable motion generation},
   journal   = {},
   year      = {2024},
 }</code></pre>
