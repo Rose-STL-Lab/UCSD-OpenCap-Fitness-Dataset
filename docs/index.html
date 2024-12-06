@@ -147,7 +147,7 @@
       </video> -->
       <img src="./static/images/Sports_Analytic_Mockup_1_V4.png"
            class="interpolation-image"
-           alt="Interpolation end reference image."/>
+           alt="Teaser figure"/>
       
       <h2 class="subtitle has-text-centered">
         <b> BIGE</b> is a framework for generative models to adhere to clinician-defined constraints. 
@@ -235,6 +235,79 @@
 </section>
 
 
+
+
+<section class="section hero is-light">
+  <div class="container is-max-desktop">
+
+    <div class="columns is-centered">
+      <!-- Animation. -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3 has-text-centered">Biomechanical Constraints</h2>
+        <img src="./static/images/constrains.png"
+        class="interpolation-image"
+        alt="Teaser figure"/>
+        <p>Our framework allows clinicians to impose multiple biomechanical constraints and criteria on the
+          generated motion, ensuring adherence to physiologically meaningful properties. These constraints
+          can target various aspects of the motion, including joint kinematics (pelvis tilt, angular velocity ω
+          ), joint center dynamics (center of mass (COM) velocity and acceleration)
+        <br>
+        To promote physiologically relevant muscle activations, we enforce range constraints on the ‘Vastus Medialis’ muscles. This leads to deeper squats by restricting the activations of the left and right vastus medialis muscles within a user-defined range.
+        </p>      
+        
+      </div>
+    <!--/ Matting. -->
+  </div>
+</section>
+
+
+
+
+<section class="section hero">
+  <div class="container is-max-desktop">
+
+    <div class="columns is-centered">
+      <!-- Animation. -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3 has-text-centered">Score Calculation</h2>
+        <img src="./static/images/BITTE_Overview_1_V1.png"
+        class="interpolation-image"
+        alt="Teaser figure"/>
+        <p>Latent variables (sampled randomly) are decoded using the decoder to generate joint kinematics output. Next, hierarchical transformations are applied to the biomechanical model, to compute joint centers. Then a surrogate model predicts muscle activations. Finally, clinician-defined constraints are imposed on the derived variables. </p>      
+      </div>
+    <!--/ Matting. -->
+  </div>
+</section>
+
+
+
+<section class="section hero">
+  <div class="container is-max-desktop">
+
+    <div class="columns is-centered">
+      <!-- Animation. -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3 has-text-centered">Comparision</h2>
+        <video id="teaser" autoplay muted loop playsinline height="100%">
+        <source src="./static/videos/comparision.mp4"
+                type="video/mp4">
+        </video>
+        <p>
+            Comparison of generated samples from baselines and BIGE. The yellow curve represents the movement of the hip joint over the entire squat cycle. BIGE generates a more realistic squat motion compared to baselines.
+        </p>      
+        <img src="./static/images/BIGE_Qualitative_Diagram_V4.jpeg"
+        class="interpolation-image"
+        alt="Teaser figure"/>
+        <p>
+          Comparison of generated samples from MDM and BIGE with the reference data. The yellow curve represents the movement of the hip joint over the entire squat cycle. BIGE generates a more natural squat motion compared to MDM. The red circle highlights the artifact observed in the pelvic tilt for MDM-generated motion.
+        </p>
+    </div>
+    <!--/ Matting. -->
+  </div>
+</section>
 
 
 
