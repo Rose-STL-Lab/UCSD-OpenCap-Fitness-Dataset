@@ -276,6 +276,9 @@
         class="interpolation-image"
         alt="Teaser figure"/>
         <p>Latent variables (sampled randomly) are decoded using the decoder to generate joint kinematics output. Next, hierarchical transformations are applied to the biomechanical model, to compute joint centers. Then a surrogate model predicts muscle activations. Finally, clinician-defined constraints are imposed on the derived variables. </p>      
+        <img src="./static/images/guidance_results.png"
+        class="interpolation-image"
+        alt="Teaser figure"/>      
       </div>
     <!--/ Matting. -->
   </div>
@@ -283,7 +286,7 @@
 
 
 
-<section class="section hero">
+<section class="section hero is-light">
   <div class="container is-max-desktop">
 
     <div class="columns is-centered">
@@ -311,6 +314,22 @@
 
 
 
+<section class="section hero">
+  <div class="container is-max-desktop">
+
+    <div class="columns is-centered">
+      <!-- Animation. -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3 has-text-centered">Evaluation</h2>
+        <img src="./static/images/evaluation_metrics.png"
+        class="interpolation-image"
+        alt="Teaser figure"/>
+    </div>
+    <!--/ Matting. -->
+  </div>
+</section>
+
 
 <section class="section hero is-light">
   <div class="container is-max-desktop">
@@ -319,70 +338,16 @@
       <!-- Animation. -->
     <div class="columns is-centered">
       <div class="column is-full-width">
-        <h2 class="title is-3 has-text-centered">Dataset</h2>
-        <p>The datset comprises of over 3000 high-quality motion samples and 13 action labels. Each video is accompanied a "MCS Score," ranging from 1 to 5. This score serves as
-          a qualitative measure, with 1 indicating suboptimal movement and 5 representing an exemplary
-          execution of the specific action. 
+        <h2 class="title is-3 has-text-centered">Muscle activation guidance </h2>
+        <img src="./static/images/BIGE_Ablations_V3.jpeg"
+        class="interpolation-image"
+        alt="Teaser figure"/>
+
+        <p>
+          The generated motion samples are ordered by the peak muscle activation. The red and green lines at 50% squat cycle represent the depth of the squat. Our guidance strategy leads to a more physiologically accurate squat motion as evidenced by the increased depth of the squat.
         </p>
-
-      
-    </div>
-    <!--/ Matting. -->
   </div>
-</section>
-
-
-<section class="hero is-light is-small">
-  <div class="hero-body">
-    <div class="container is-max-desktop">
-      <div id="results-carousel" class="carousel results-carousel">
-
-        <div class="item item-quadrapeds">
-          <video poster="" id="CMJ" autoplay controls muted loop playsinline height="100%">
-            <source src="./static/videos/CMJ.mp4"
-                    type="video/mp4">
-          </video>
-        </div>
-        <div class="item item-quadrapeds">
-          <video poster="" id="LCMJ" autoplay controls muted loop playsinline height="100%">
-            <source src="./static/videos/LCMJ.mp4"
-                    type="video/mp4">
-          </video>
-        </div>        
-        <div class="item item-quadrapeds">
-          <video poster="" id="LCMJ" autoplay controls muted loop playsinline height="100%">
-            <source src="./static/videos/LCMJ.mp4"
-                    type="video/mp4">
-          </video>
-        </div>
-        <div>
-          <video poster="" id="quadrapeds" autoplay controls muted loop playsinline height="100%">
-            <source src="./static/videos/LLTF_1_smpl.mp4"
-                    type="video/mp4">
-          </video>
-        </div>
-        <div class="item item-teaser">
-          <video poster="" id="teaser" autoplay controls muted loop playsinline height="100%">
-            <source src="./static/videos/RLTF_1_smpl.mp4"
-                    type="video/mp4">
-          </video>
-        </div>
-        <div class="item item-bipeds">
-          <video poster="" id="bipeds" autoplay controls muted loop playsinline>
-            <source src="./static/videos/RSLS_1_smpl.mp4"
-                    type="video/mp4">
-          </video>
-        </div>
-
-        <div class="item item-doll">
-          <video poster="" id="doll" autoplay controls muted loop playsinline height="100%" width="100%">
-            <source src="./static/videos/LLT_1_smpl.mp4"
-                    type="video/mp4">
-          </video>
-        </div>
-
-      </div>
-    </div>
+    <!--/ Matting. -->
   </div>
 </section>
 
@@ -437,90 +402,7 @@
 </section>
 
 
-
-<section class="section hero is-light">
-  <div class="container is-max-desktop">
-
-    <div class="columns is-centered">
-      <!-- Animation. -->
-    <div class="columns is-centered">
-      <div class="column is-full-width">
-        <p>The uniqueness of the OpenCap dataset lies in its focus on capturing
-          a diverse range of human motions, with an emphasis on activities commonly associated with physical
-          fitness. To ensure the dataset’s richness and authenticity, the motion samples were meticulously
-          recorded by observing athletes from the University of California, San Diego (UCSD) performing
-          various sports movements. 
-        </p>
-
-      
-    </div>
-    <!--/ Matting. -->
-  </div>
-</section>
-
-
-<!-- <section class="section">
-  <div class="container is-max-desktop has-text-centered">
-    <h2 class="title is-3"> Generating Style Tags </h2>
-    <div class="content has-text-justified">
-      <ul>
-        <li>
-          <p>
-          The style tags encompass both the exercise category (such as push-ups and squats) and the MCS scores assigned by experts.
-          </p>
-        </li>
-        <li>
-          <p>
-          We train 2 classifiers to predict the category and the MCS score.  
-          </p>
-        </li>
-      </ul>
-      <div class="content">
-        <img src="./static/images/classifier-comparision.png"
-              class="interpolation-image"
-              alt="Extracted Curve Skeleton"/>
-        <p class="is-centered">
-          The above table shows the accuracy between classifiers with different window size based.
-        </p>
-      </div>
-    </div>
-  </div>
-
-</section> -->
-
 <!-- 
-
-<section class="section hero">
-  <div class="container is-max-desktop">
-
-    <div class="columns is-centered">
-    <div class="columns is-centered">
-      <div class="column is-full-width">
-        <h2 class="title is-3 has-text-centered">Comparisions</h2>
-
-        <h3 class="title is-4 has-text-centered">Constraint composition</h3>
-        <div class="content has-text-justified">
-          <img src="./static/images/kit-comparision.png"
-                 class="interpolation-image"
-                 alt="Interpolation end reference image."/>
-        </div>
-        <br/>
-
-        <h3 class="title is-4 has-text-centered"> Stylized generatation</h3>
-        <div class="content has-text-justified">
-          <img src="./static/images/opecap-comparision.png"
-                 class="interpolation-image"
-                 alt="Interpolation end reference image."/>
-          <p>
-             Compared to motion skeleton extracted from other methods, by incorporating structural cues, ours is more effective at embedding skeleton from incomplete mesh sequence.
-          </p>
-        </div>
-
-      
-    </div>
-  </div>
-</section> -->
-
 <section class="section  is-light" id="BibTeX">
   <div class="container is-max-desktop content">
     <h2 class="title">BibTeX</h2>
@@ -531,7 +413,7 @@
   year      = {2024},
 }</code></pre>
   </div>
-</section>
+</section> -->
 
 
 <footer class="footer">
