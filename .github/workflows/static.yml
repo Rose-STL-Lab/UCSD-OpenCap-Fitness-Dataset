@@ -31,6 +31,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Configure Git to trust the workspace directory
+        run: 'git config --global --add safe.directory /github/workspace'
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Upload artifact
@@ -41,8 +43,6 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v3
-      - name: Configure Git to trust the workspace directory
-        run: 'git config --global --add safe.directory /github/workspace'
       - name: Force push to destination branch 
         uses: ad-m/github-push-action@v0.5.0
         with:
