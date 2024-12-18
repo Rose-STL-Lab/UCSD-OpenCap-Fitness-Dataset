@@ -72,7 +72,7 @@ def load_osim(osim_path, geometry_path, ignore_geometry=False):
     return osim
 
 
-def load_mot(osim, mot_file, start_frame=None, end_frame=None, fps_out: int=None, ignore_fps=False): 
+def load_mot(osim, mot_file, start_frame=None, end_frame=None, fps_out: int=None, ignore_fps=True): 
     
     # Need absolute path
     mot_file = os.path.abspath(mot_file)

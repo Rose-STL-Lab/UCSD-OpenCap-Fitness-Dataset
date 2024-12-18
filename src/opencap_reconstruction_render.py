@@ -23,7 +23,7 @@ class Visualizer:
 		ps.set_automatically_compute_scene_extents(True)
 		ps.set_navigation_style("free")
 		# ps.set_view_projection_mode("orthographic")
-		# ps.set_ground_plane_mode('shadow_only')
+		ps.set_ground_plane_mode('shadow_only')
 
 		self.renderSMPL = renderSMPL
 
@@ -232,7 +232,7 @@ class Visualizer:
 
 		ps.remove_all_structures()
 		# camera_position = np.array([0,0,3*self.ps_data['bbox'][0]])
-		camera_position = np.array([7*self.ps_data['bbox'][0],0.0*self.ps_data['bbox'][1],0]) + self.ps_data['object_position']
+		camera_position = np.array([7*self.ps_data['bbox'][0],+0.5*self.ps_data['bbox'][1],0]) + self.ps_data['object_position']
 		look_at_position = np.array([0,0,0]) + self.ps_data['object_position']
 		ps.look_at(camera_position,look_at_position)
 
@@ -452,10 +452,12 @@ class Visualizer:
 		video_path = os.path.abspath(video_path)
 		palette_path = os.path.join(video_dir,"video",f"smpl.png")
 		frame_rate = self.ps_data['fps']
-		os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -vf palettegen {palette_path}")
-		os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse 	-q:v 5 {video_path}")	
-		# os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse {video_path.replace('mp4','gif')}")	
-
+		os.system(f"/usr/bin/ffmpeg -y -framerate {frame_rate} -i {image_path} -vf palettegen {palette_path}")
+		os.system(f"/usr/bin/ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse 	-q:v 5 {video_path.replace('.mp4','_large.mp4')}")	
+		os.system(f"/usr/bin/ffmpeg -y -i {video_path.replace('.mp4','_large.mp4')}  -vcodec libx265 -crf 28 {video_path}")
+  		# os.system(f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse {video_path.replace('mp4','gif')}")	
+		# os.system(f"rm {video_path.replace('.mp4','_large.mp4')}")	
+  
 		print(f"Running Command:",f"ffmpeg -y -framerate {frame_rate} -i {image_path} -i {palette_path} -lavfi paletteuse {video_path}")
 
 
