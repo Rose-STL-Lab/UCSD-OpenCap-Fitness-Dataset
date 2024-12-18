@@ -460,10 +460,11 @@ else:
     mcs_aggregate_data = {2:{}, 3:{}, 4:{}, 0:{}, -1:{}}
 
 ## Need to compute R2 values for each surrogate result
-R2 = {'total_predictions':0, 'SST':np.zeros((0,len(page_dict))),  'SSE':{}}
+R2 = {'total_predictions':0, 'SST':np.zeros((0,len(page_dict))), 'SST-List':np.zeros((0,len(page_dict),101)),   'SSE':{}, 'SSE-List':{}}
 for surrogate_result in ['ground_truth'] + surrogate_results_list:
     surrogate_result = os.path.basename(surrogate_result)
     R2['SSE'][surrogate_result] = np.zeros((0,len(page_dict)))
+    R2['SSE-List'][surrogate_result] = np.zeros((0,len(page_dict),101))
     
 
 for plotting_variable in ['kinematics','kinetics']:
@@ -589,6 +590,7 @@ for subject_ind, subject_name in tqdm.tqdm(enumerate(subjects)):
 
                     SSE = (plot_data_trial[plotting_variable][muscle_activation][:surrogate_timesteps] - plot_data_trial[plotting_variable]['ground_truth'][:surrogate_timesteps])**2
                     R2['SSE'][muscle_activation] = np.concatenate([R2['SSE'][muscle_activation],SSE],axis=0)
+                    
 
                     time_normalized_series = [time_normalization(plot_data_trial[plotting_variable][muscle_activation][segment[0]:segment[1]]) for segment in segments if segment[1] > segment[0] ] 
                     if plotting_variable not in plot_data:
@@ -598,6 +600,8 @@ for subject_ind, subject_name in tqdm.tqdm(enumerate(subjects)):
                         plot_data[plotting_variable][muscle_activation] = []
 
                     plot_data[plotting_variable][muscle_activation].extend(time_normalized_series)
+
+
 
 
 
@@ -663,6 +667,8 @@ for subject_ind, subject_name in tqdm.tqdm(enumerate(subjects)):
                 # mcs_aggregate_data[mcs_score][plotting_variable]['ppe_trial'].extend([trial_index]*plot_data[plotting_variable].shape[1])
                 mcs_aggregate_data[mcs_score][plotting_variable]['total_trials'] += plot_data[plotting_variable].shape[1]
         
+
+        
         elif 'muscle_activations' in plotting_variable:
             for muscle_activations in plot_data[plotting_variable]:
                 if not np.isnan(plot_data[plotting_variable][muscle_activations]).any():
@@ -680,6 +686,12 @@ for subject_ind, subject_name in tqdm.tqdm(enumerate(subjects)):
                     mcs_aggregate_data[mcs_score][plotting_variable][muscle_activations]['ppe_names'].extend([PPE_Subjects[subject_name]]*plot_data[plotting_variable][muscle_activations].shape[1])
                     # mcs_aggregate_data[mcs_score][plotting_variable][muscle_activations]['ppe_trial'].extend([trial_index]*plot_data[plotting_variable][muscle_activations].shape[1])
                     mcs_aggregate_data[mcs_score][plotting_variable][muscle_activations]['total_trials'] += plot_data[plotting_variable][muscle_activations].shape[1]
+
+
+                    R2['SST-List']  = np.concatenate([R2['SST-List'],np.transpose(plot_data[plotting_variable][muscle_activations],(1,0,2))],axis=0)
+                
+                    SSE_List = (plot_data[plotting_variable][muscle_activations] - plot_data[plotting_variable]['ground_truth'])**2
+                    R2['SSE-List'][muscle_activation]  = np.concatenate([R2['SSE-List'][muscle_activation],np.transpose(SSE_List,(1,0,2))],axis=0)
 
     total_trials += plot_data['kinematics'].shape[1]
             
@@ -730,8 +742,15 @@ for mcs_score in mcs_aggregate_data:
 R2_mean = np.mean(R2['SST'],axis=0,keepdims=True)
 R2_SST = np.sum( (R2['SST'] - R2_mean)**2  ,axis=0)
 
+R2_list_mean = np.mean(R2['SST-List'],axis=0,keepdims=True)
+R2_list_SST = np.sum( (R2['SST-List'] - R2_list_mean)**2  ,axis=0)
+
 R2['R2'] = {}
 R2['RMSE'] = {}
+R2['STD'] = {}
+R2['R2-List'] = {}
+R2['Res-List'] = {}
+R2['RMSE-List'] = {}
 for surrogate_result in R2['SSE']:
     R2['SSE'][surrogate_result] = np.sum(R2['SSE'][surrogate_result],axis=0)
     R2['R2'][surrogate_result] = 1 - R2['SSE'][surrogate_result]/R2_SST
@@ -742,6 +761,119 @@ for surrogate_result in R2['SSE']:
     print(f"R2 Surrogate:{surrogate_result}")
     for muscle in results:
         print(f"{muscle[0]}:{muscle[1]:.3f}")
+
+
+    R2['RMSE-List'][surrogate_result] = np.sqrt(R2['SSE-List'][surrogate_result]/R2['total_predictions'])
+    R2['Res-List'][surrogate_result] = np.sqrt(R2['SSE-List'][surrogate_result])/R2['total_predictions']
+
+    R2['SSE-List'][surrogate_result] = np.sum(R2['SSE-List'][surrogate_result],axis=0)
+    R2['R2-List'][surrogate_result] = 1 - R2['SSE-List'][surrogate_result]/(R2_list_SST+1e-8)
+
+
+
+
+
+
+
+def plot_metrics(headers,plot_data,title_text="Plot Data",data_type="kinematics",num_cols=4, visualize=False): 
+    
+    # assert plot_data.shape[-1] == 101, "Length of data should be 101"
+    num_rows = int(np.ceil(len(headers)/num_cols))
+
+
+    if data_type == 'kinematics' or data_type == 'kinetics':
+        fig = make_subplots(rows=num_rows, cols=num_cols, subplot_titles=[ plot_names_mapping[header] + ( ' moments' if data_type == 'kinetics' else '' )  for header in headers]) 
+    elif  'muscle_activations' in data_type:
+        fig = make_subplots(rows=num_rows, cols=num_cols, subplot_titles=[plot_muscle_activations_mapping[header] for header in headers])
+    else: 
+        raise ValueError("Invalid data type. Should be either kinematics or kinetics or muscle_activations")
+
+
+    # Colors for left and right sides
+    colors = {'left': 'blue', 'right': 'red'}
+
+    # Create each subplot
+    for i, header in enumerate(headers):
+        row = i // num_cols + 1
+        col = i % num_cols + 1
+        
+        if i >= len(headers): 
+            break
+
+
+        if 'muscle_activations' in data_type:
+            title = plot_muscle_activations_mapping[header]
+        elif data_type == 'kinematics' or data_type == 'kinetics':
+            title = plot_names_mapping[header]
+        else:
+            raise ValueError("Invalid data type. Should be either kinematics or kinetics or muscle_activations")
+
+        # Plot every kinematics data
+        x = np.linspace(0,1,num=plot_data_mean[i].shape[-1])
+
+    
+        fig.add_trace(go.Scatter(x=x, y=plot_data_mean[i], showlegend=False, name=f'{title}'), row=row, col=col)
+        fig.add_trace(go.Scatter(x=list(x) + list(x)[::-1], 
+                                    y=list(plot_data_mean[i] + np.array(plot_data_std[i])) + list(np.array(plot_data_mean[i]) - np.array(plot_data_std[i]))[::-1] ,
+                                        mode='lines', line=dict(width=0), name=f'{title} Bounds', showlegend=False, fill='toself',hoverinfo="skip",),
+        row=row, col=col)
+
+        # Update y-axis label
+        if data_type == 'kinematics':
+            fig.update_yaxes(title_text='deg', row=row, col=col)
+        elif data_type == 'kinetics':
+            fig.update_yaxes(title_text='Nm', row=row, col=col)
+        elif 'muscle_activations' in data_type: 
+            fig.update_yaxes(title_text='0-1', row=row, col=col)
+
+        fig.update_xaxes(title_text='% SQT Cycle (Seconds)', row=row, col=col)
+
+    
+
+    # Update layout
+    # plot_height = 1800 if 'muscle_activations' in data_type else 1000
+    fig.update_layout(height=1000, width=2000,
+                        showlegend=False,  title_x=0.5,
+                        title_text=title_text,
+                        font_family="Times New Roman",
+                        font_color="black",
+                        title_font_family="Times New Roman",
+                        title_font_color="black")
+
+    # Show the figure
+    if visualize:
+        fig.show()
+    
+    return fig
+
+for k in R2:    
+    if 'List' not in k: 
+        continue
+    for muscle_activation in R2[k]:
+        mc_page_index = int(k.split('-')[-1])
+        for muscle_activation_name in aggregate_data[k]:
+            fig = plot_data_distribution(plot_muscle_activations_mapping_pages[mc_page_index], aggregate_data[k][muscle_activation_name]['mean'],aggregate_data[k][muscle_activation_name]['std'], f"Aggregate {k} {muscle_activation_name} ",data_type=k)
+            plotly.io.write_image(fig, os.path.join(pdf_dir, f'all_subject-{k}-{muscle_activations}.pdf'), format='pdf')
+    else: 
+        raise ValueError(f"Unknown plotting variable:{k}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 mcs_scores
@@ -1018,8 +1150,6 @@ def plot_mcs_data(headers,mcs_aggregate_data,title_text="Plot Data",data_type="k
         fig.show()
     
     return fig
-
-
 
 for k in ['kinematics','kinetics']:
 
