@@ -97,7 +97,7 @@ def get_multiple_motions_for_mcs_data(args):
 
 	# For every MCS subject: perform forward kinematics and get the joint motion
 	for session_index, session_id in enumerate(session_ids):
-
+		print("Session ID:", session_id)
 		subject_path = os.path.join(args.data_dir, 'Data',session_id) 
 		osim_path = os.path.join(subject_path,'OpenSimData','Model', 'LaiArnoldModified2017_poly_withArms_weldHand_scaled_adjusted_contacts.osim')
 
@@ -117,84 +117,137 @@ def get_multiple_motions_for_mcs_data(args):
 
 		# The mot file can be provided in 4 ways
 		# 1. Single Mot file. Load the motion and return it.
-		if os.path.isfile(args.mot): 
-			joint_centers_file, joint_centers = store_and_load_motion(osim_path, osim, args.mot,save_dir=save_dir, force_save=args.force)
-			subject_retreived_motions[session_id].append((joint_centers_file, joint_centers))			
+		# if os.path.isfile(args.mot): 
+		# 	joint_centers_file, joint_centers = store_and_load_motion(osim_path, osim, args.mot,save_dir=save_dir, force_save=args.force)
+		# 	subject_retreived_motions[session_id].append((joint_centers_file, joint_centers))			
 
-		# 2. Single Mot file in the subject path
-		elif os.path.isfile(os.path.join(subject_path,'OpenSimData','Kinematics',args.mot)):
-			joint_centers_file, joint_centers = store_and_load_motion(osim_path, osim, args.mot, save_dir=save_dir,force_save=args.force)
-			subject_retreived_motions[session_id].append((joint_centers_file, joint_centers))
+		# # 2. Single Mot file in the subject path
+		# elif os.path.isfile(os.path.join(subject_path,'OpenSimData','Kinematics',args.mot)):
+		# 	joint_centers_file, joint_centers = store_and_load_motion(osim_path, osim, args.mot, save_dir=save_dir,force_save=args.force)
+		# 	subject_retreived_motions[session_id].append((joint_centers_file, joint_centers))
 
-		# 3. Directory of containg Mot files
-		elif os.path.isdir(args.mot):
-			for mot_file in os.listdir(args.mot): 
-				mot_file = os.path.join(args.mot, mot_file)
+		# # 3. Directory of containg Mot files
+		# elif os.path.isdir(args.mot):
+		# 	for mot_file in os.listdir(args.mot): 
+		# 		mot_file = os.path.join(args.mot, mot_file)
+		# 		try:
+		# 			joint_centers_file, joint_centers = store_and_load_motion(osim_path, osim, mot_file, save_dir=save_dir,force_save=args.force)
+		# 			subject_retreived_motions[session_id].append((joint_centers_file, joint_centers))			
+					
+		# 			# break
+		# 		except NOT_MOT_FILE_ERROR as e:
+		# 			print(e)
+		# 			continue
+
+
+		# # 4. Directory of containg files in the subject path
+		# if os.path.isdir(os.path.join(subject_path,'OpenSimData',args.mot)):
+			
+
+		################ Specific rules for loading kinematics data ##############################
+		if 'Kinematics' in args.mot:
+			for mot_file in os.listdir(os.path.join(subject_path,'OpenSimData',args.mot)):
+				if not mot_file.endswith('.mot'): continue
+
+				if args.category.lower() not in mot_file.lower(): continue# If does not match the matching critirea
+
+				mot_file = os.path.join(subject_path,'OpenSimData', args.mot, mot_file)
 				try:
 					joint_centers_file, joint_centers = store_and_load_motion(osim_path, osim, mot_file, save_dir=save_dir,force_save=args.force)
 					subject_retreived_motions[session_id].append((joint_centers_file, joint_centers))			
 					
-					# break
 				except NOT_MOT_FILE_ERROR as e:
 					print(e)
 					continue
 
+		################ Specific rules for loading kinematics data ##############################
+		elif args.mot == 'Dynamics':
+			for trial_name in os.listdir(os.path.join(subject_path,'OpenSimData','Dynamics')):
+				if args.category.lower() not in trial_name.lower(): continue# If does not match the category matching critirea
 
-		# 4. Directory of containg files in the subject path
-		elif os.path.isdir(os.path.join(subject_path,'OpenSimData',args.mot)):
-			
+				if not os.path.isdir(os.path.join(subject_path,'OpenSimData','Dynamics', trial_name)): continue # Skip if not a directory
 
-			################ Specific rules for loading kinematics data ##############################
-			if 'Kinematics' in args.mot:
-				for mot_file in os.listdir(os.path.join(subject_path,'OpenSimData',args.mot)):
-					if not mot_file.endswith('.mot'): continue
+				# After running torque driven simulation, the kinematics and kinetics files are stored in the following format	
+				mot_file = os.path.join(subject_path,'OpenSimData','Dynamics', trial_name,f"kinematics_activations_{trial_name}_torque_driven.mot")
 
-					if args.category.lower() not in mot_file.lower(): continue# If does not match the matching critirea
+				if not os.path.exists(mot_file): continue # Skip if directory does not contain the kinematics file. Probably the simulation failed
 
-					mot_file = os.path.join(subject_path,'OpenSimData', args.mot, mot_file)
+				try:
+					joint_centers_file, joint_centers = store_and_load_motion(osim_path, osim, mot_file, save_dir=save_dir,force_save=args.force)
+					subject_retreived_motions[session_id].append((joint_centers_file, joint_centers))			
+					
+				except NOT_MOT_FILE_ERROR as e:
+					print(e)
+					continue
+
+		elif 'PredDynamics' in args.mot:
+			for trial_name in os.listdir(os.path.join(subject_path,'OpenSimData',args.mot)):
+				if args.category.lower() not in trial_name.lower(): continue# If does not match the category matching critirea
+
+				if not os.path.isdir(os.path.join(subject_path,'OpenSimData',args.mot, trial_name)): continue # Skip if not a directory
+
+				# After running torque driven simulation, the kinematics and kinetics files are stored in the following format	
+				mot_file = os.path.join(subject_path,'OpenSimData',args.mot, trial_name,f"kinematics_activations_{trial_name}_muscle_driven.mot")
+
+				if not os.path.exists(mot_file): continue # Skip if directory does not contain the kinematics file. Probably the simulation failed
+
+				try:
+					joint_centers_file, joint_centers = store_and_load_motion(osim_path, osim, mot_file, save_dir=save_dir,force_save=args.force)
+					subject_retreived_motions[session_id].append((joint_centers_file, joint_centers))			
+					
+				except NOT_MOT_FILE_ERROR as e:
+					print(e)
+					continue
+		
+		elif args.mot == 'anwesh':
+			path = "/home/ubuntu/data/MCS_DATA/LIMO/VQVAE-Generations/mot_visualization/"
+			print("Path:",path + session_id+"/")
+			if os.path.exists(path + "latents_subject_run_" + session_id+"/"):
+				print("PATH EXISTS")
+				import glob
+				mot_files = glob.glob(path + "latents_subject_run_" + session_id+"/*.mot")
+				for mot_file in mot_files:
 					try:
+						print("MOT File:",mot_file, "OSIM Path", osim_path)
 						joint_centers_file, joint_centers = store_and_load_motion(osim_path, osim, mot_file, save_dir=save_dir,force_save=args.force)
 						subject_retreived_motions[session_id].append((joint_centers_file, joint_centers))			
-						
+					
 					except NOT_MOT_FILE_ERROR as e:
 						print(e)
 						continue
-
-			################ Specific rules for loading kinematics data ##############################
-			elif args.mot == 'Dynamics':
-				for trial_name in os.listdir(os.path.join(subject_path,'OpenSimData','Dynamics')):
-					if args.category.lower() not in trial_name.lower(): continue# If does not match the category matching critirea
-
-					if not os.path.isdir(os.path.join(subject_path,'OpenSimData','Dynamics', trial_name)): continue # Skip if not a directory
-
-					# After running torque driven simulation, the kinematics and kinetics files are stored in the following format	
-					mot_file = os.path.join(subject_path,'OpenSimData','Dynamics', trial_name,f"kinematics_activations_{trial_name}_torque_driven.mot")
-
-					if not os.path.exists(mot_file): continue # Skip if directory does not contain the kinematics file. Probably the simulation failed
-
+		
+		elif args.mot == 'sim':
+			path = "/home/ubuntu/data/MCS_DATA/Data/*/OpenSimData/Dynamics/*_segment_*/kinematics_activations_*_muscle_driven.mot"
+			# print("Path:",path + session_id+"/")
+			# if os.path.exists(path + "latents_subject_run_" + session_id+"/"):
+			# 	print("PATH EXISTS")
+			import glob
+			mot_files = glob.glob(path)
+			for mot_file in mot_files:
+				if session_id in mot_file:
 					try:
+						print("MOT File:",mot_file, "OSIM Path", osim_path)
 						joint_centers_file, joint_centers = store_and_load_motion(osim_path, osim, mot_file, save_dir=save_dir,force_save=args.force)
 						subject_retreived_motions[session_id].append((joint_centers_file, joint_centers))			
-						
+					
 					except NOT_MOT_FILE_ERROR as e:
 						print(e)
 						continue
-
-			elif 'PredDynamics' in args.mot:
-				for trial_name in os.listdir(os.path.join(subject_path,'OpenSimData',args.mot)):
-					if args.category.lower() not in trial_name.lower(): continue# If does not match the category matching critirea
-
-					if not os.path.isdir(os.path.join(subject_path,'OpenSimData',args.mot, trial_name)): continue # Skip if not a directory
-
-					# After running torque driven simulation, the kinematics and kinetics files are stored in the following format	
-					mot_file = os.path.join(subject_path,'OpenSimData',args.mot, trial_name,f"kinematics_activations_{trial_name}_muscle_driven.mot")
-
-					if not os.path.exists(mot_file): continue # Skip if directory does not contain the kinematics file. Probably the simulation failed
-
+  
+		elif args.mot == 'mocap':
+			path = "/home/ubuntu/data/MCS_DATA/Data/*/OpenSimData/Kinematics/*.mot"
+			# print("Path:",path + session_id+"/")
+			# if os.path.exists(path + "latents_subject_run_" + session_id+"/"):
+			# 	print("PATH EXISTS")
+			import glob
+			mot_files = glob.glob(path)
+			for mot_file in mot_files:
+				if session_id in mot_file and ("sqt" in mot_file or "SQT" in mot_file or "Sqt" in mot_file) and ("segment" not in mot_file):
 					try:
+						print("MOT File:",mot_file, "OSIM Path", osim_path)
 						joint_centers_file, joint_centers = store_and_load_motion(osim_path, osim, mot_file, save_dir=save_dir,force_save=args.force)
 						subject_retreived_motions[session_id].append((joint_centers_file, joint_centers))			
-						
+					
 					except NOT_MOT_FILE_ERROR as e:
 						print(e)
 						continue
