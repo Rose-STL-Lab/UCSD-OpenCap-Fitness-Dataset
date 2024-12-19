@@ -304,7 +304,7 @@ class Visualizer:
 		
 
 		# Take a screenshot of the initial setup 
-		ps.show()
+		# ps.show()
 		if video_name is not None:
 			image_path = video_name.replace('.mp4', "_initial.png")
 			# print(f"Saving plot to :{image_path}")	
