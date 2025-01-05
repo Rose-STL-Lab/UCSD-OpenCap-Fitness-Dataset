@@ -121,10 +121,44 @@ python src/opencap_reconstruction_render.py <subject-path>  <mot-path>  <save-pa
 
 ###  Rendering 
 Renders a video of the skeleton video using polyscope 
+
+
+
+
+- Compare  <= 3 .mot files 
+    - For OpenCap
+        ```
+         python src/plot_3.py MCS_DATA/Data/fb6e8f87-a1cc-48b4-8217-4e8b160602bf/MarkerData/SQT01.trc
+        ```
+
+
+    - For Simulation data
+        ```
+        python src/plot_3.py  MCS_DATA/Data/<subject-path>/OpenSimData/Dynamics/SQT01_segment_?/kinematics_activations_SQT01_segment_?_muscle_driven.mot 
+
+        ```
+
+
+
+
+- Plot 5 timesteps 
 ```
-python3 python src/opencap_reconstruction_render.py # For complete dataset
+python src/plot_series.py  MCS_DATA/Data/015b7571-9f0b-4db4-a854-68e57640640d/OpenSimData/Dynamics/SQT01_segment_2/kinematics_activations_SQT01_segment_2_muscle_driven.mot  
 ```
-Or 
+
+
+- Plot series in perspective view with ground. 
+
+```
+python src/plot_main_diagram.py  MCS_DATA/LIMO/FinalFinalHigh/mot_visualization/latents_subject_run_d66330dc-7884-4915-9dbb-0520932294c4/entry_19_FinalFinalHigh.mot render/bige_d66330dc-7884-4915-9dbb-0520932294c4_images.mp4
+
+python src/plot_main_diagram.py MCS_DATA/mdm_baseline/015b7571-9f0b-4db4-a854-68e57640640d/results_5_radians.mot
+```
+
+
+
+- Compare MoCap with any mot file  
+
 ```
 python3 python src/opencap_reconstruction_render.py <subject-path>  <mot-path>  <save-path> # Specific trc file
 ```
@@ -305,13 +339,6 @@ Multiple modules need to be installed
 
 </details>
 
-
-
-
-
-#### TODO: Per sample pose reconstruction using PCA 
-
-#### TODO: Per sample per joint fourier analysis 
 
 
 #### Muscle forces reaction data analysis
