@@ -31,6 +31,52 @@ class NOT_MOT_FILE_ERROR(Exception):
         super().__init__(self.message)
 
 
+def load_muscles(osim_path):
+
+    # Make sure to load 'LaiArnoldModified2017_poly_withArms_weldHand_scaled_adjusted_contacts.osim' file
+    if 'contacts' not in  osim_path:
+        
+        better_osim_files = [ file for file in os.listdir(os.path.dirname(osim_path)) if 'contacts' in file]  
+        if len(better_osim_files) == 0: 
+            raise Exception(f'Could not find osim file used for simulation (LaiArnoldModified2017_poly_withArms_weldHand_scaled_adjusted_contacts.osim): {osim_path}')
+        else:
+            osim_path = os.path.join(os.path.dirname(osim_path), better_osim_files[0])
+
+    import opensim
+
+    lai_arnold = opensim.Model(osim_path)
+    state = lai_arnold.initSystem()  # Initialize the system to get the state
+
+    muscles_info = {}
+
+    muscles = lai_arnold.getMuscles()
+    for i in range(muscles.getSize()):
+        muscle = muscles.get(i)
+        muscle_name = muscle.getName()
+        
+        point_locations = []
+        point_parent_frames = []        
+        # Get  insertion points
+        for point_ind in range(muscle.getGeometryPath().getPathPointSet().getSize()):
+            point = muscle.getGeometryPath().getPathPointSet().get(point_ind)
+            point_location = point.getLocation(state).to_numpy()
+            
+            parent_socket = point.getSocket('parent_frame')
+            point_parent_frame = parent_socket.getConnecteePath()
+
+            point_locations.append(point_location)
+            point_parent_frames.append(point_parent_frame)
+        
+            # print(point_parent_frame)
+        
+        muscles_info[muscle_name] = {
+            'point_locations' : np.array(point_locations),
+            'point_parent_frames' : point_parent_frames 
+        }
+
+    return muscles_info
+
+
 def load_osim(osim_path, geometry_path, ignore_geometry=False):
     """Load an osim file"""
        
@@ -176,6 +222,16 @@ class OSIMSequence():
         
         self.meshes_dict = {}
         self.indices_dict = {}
+        
+        self.muscles_dict = load_muscles(self.osim_path)
+        for muscle_name, muscle_info in self.muscles_dict.items():
+            for point_ind in range(muscle_info['point_locations'].shape[0]):
+                parent_node = muscle_info['point_parent_frames'][point_ind].replace('/bodyset/','')
+                does_parent_exist = parent_node in self.node_names
+                if not does_parent_exist:        
+                    print(f"Can't find attachment for the {muscle_name}-{point_ind} parent node:{parent_node}, skipping")
+        
+        
         self.generate_meshes_dict() # Populate self.meshes_dict and self.indices_dict
         self.create_template()
 
@@ -185,7 +241,7 @@ class OSIMSequence():
         self.markers_labels = markers_labels
 
         # Nodes
-        self.vertices, self.faces, self.marker_trajectory, self.joints, self.joints_ori = self.fk()
+        self.vertices, self.faces, self.marker_trajectory, self.joints, self.joints_ori, self.muscle_trajectory = self.fk()
         
         #### Clamp the lowest point of the mesh (median across timeseries) to the ground
         clamp = True
@@ -198,12 +254,12 @@ class OSIMSequence():
             translation = -self.vertices[:,closest_vertex_ind,:]
             self.motion[:,3:6] += translation
 
-            self.vertices, self.faces, self.marker_trajectory, self.joints, self.joints_ori = self.fk()
+            self.vertices, self.faces, self.marker_trajectory, self.joints, self.joints_ori, self.muscle_trajectory = self.fk()
 
         # TODO: fix that. This triggers a segfault at destruction so I hardcode it
         # self.joints_labels = [J.getName() for J in self.osim.skeleton.getJoints()]
         # self.joints_labels = ['ground_pelvis', 'hip_r', 'walker_knee_r', 'ankle_r', 'subtalar_r', 'mtp_r', 'hip_l', 'walker_knee_l', 'ankle_l', 'subtalar_l', 'mtp_l', 'back', 'neck', 'acromial_r', 'elbow_r', 'radioulnar_r', 'radius_hand_r', 'acromial_l', 'elbow_l', 'radioulnar_l', 'radius_hand_l']
-    
+
 
     def per_part_bone_colors(self):
         """ Color the mesh with one color per node. """
@@ -261,6 +317,15 @@ class OSIMSequence():
                     submesh.vertices[:] += offset
                     # print(f'submesh_path: {submesh_path}, Nb vertices: {submesh.vertices.shape[0]}')
                     mesh_list.append(submesh)
+                    
+                    # Update muscle info with the new location and scale. 
+                    for muscle_name, muscle_info in self.muscles_dict.items():
+                        for point_ind in range(muscle_info['point_locations'].shape[0]):
+                            is_body_parent = f'bodyset/{node_name}' in muscle_info['point_parent_frames'][point_ind]
+                            # print(is_body_parent)
+                            if is_body_parent:
+                                self.muscles_dict[muscle_name]['point_locations'][point_ind] = self.muscles_dict[muscle_name]['point_locations'][point_ind] * scale
+                                self.muscles_dict[muscle_name]['point_locations'][point_ind] += offset
 
             # Concatenate meshes
             if mesh_list:
@@ -437,6 +502,8 @@ class OSIMSequence():
         joints = np.zeros([self.n_frames, len(self.meshes_dict), 3])
         joints_ori = np.zeros([self.n_frames, len(self.meshes_dict), 3, 3])
 
+        muscle_trajectory_dict = dict([ muscle_name, np.zeros([self.n_frames, muscle_info['point_locations'].shape[0], 3]) ] for muscle_name, muscle_info in self.muscles_dict.items())
+
         prev_verts = verts[0]
         prev_pose = self.motion[0, :]
         
@@ -445,9 +512,9 @@ class OSIMSequence():
 
             pose = self.motion[frame_id, :]
             # If the pose did not change, use the previous frame verts
-            if np.all(pose == prev_pose) and frame_id != 0:
-                verts[frame_id] = prev_verts
-                continue
+            # if np.all(pose == prev_pose) and frame_id != 0:
+            #     verts[frame_id] = prev_verts
+            #     continue
 
             # Pose osim
             self.osim.skeleton.setPositions(self.motion[frame_id, :])
@@ -461,13 +528,14 @@ class OSIMSequence():
                 # if ('thorax' in node_name) or ('lumbar' in node_name):
                 #     # We do not display the spine as the riggidly rigged mesh can't represent the constant curvature of the spine
                 #     continue
+
+                # pose part
+                transfo = self.osim.skeleton.getBodyNode(node_name).getWorldTransform()
+
                 mesh = self.meshes_dict[node_name]
                 if mesh is not None:
 
                     part_verts = mesh.vertices
-
-                    # pose part
-                    transfo = self.osim.skeleton.getBodyNode(node_name).getWorldTransform()
                     
                     # Add a row of homogenous coordinates 
                     part_verts = np.concatenate([part_verts, np.ones((mesh.vertices.shape[0], 1))], axis=1)
@@ -477,10 +545,17 @@ class OSIMSequence():
                     id_start, id_end = self.indices_dict[node_name]
                     verts[frame_id, id_start :id_end, :] = part_verts
 
-                    # Update joint                    
-                    joints[frame_id, ni, :] = transfo.translation()
-                    joints_ori[frame_id, ni, :, :] = transfo.rotation()
+                # Update joint                    
+                joints[frame_id, ni, :] = transfo.translation()
+                joints_ori[frame_id, ni, :, :] = transfo.rotation()
             
+                for muscle_name in muscle_trajectory_dict:
+                    for point_ind in range(self.muscles_dict[muscle_name]['point_locations'].shape[0]):
+                        if f'bodyset/{node_name}' in self.muscles_dict[muscle_name]['point_parent_frames'][point_ind]:
+                            muscle_trajectory_dict[muscle_name][frame_id, point_ind, :] = np.matmul(self.muscles_dict[muscle_name]['point_locations'][point_ind], transfo.rotation().T) + transfo.translation()
+                    
+                        
+
 
             prev_verts = verts[frame_id]
             prev_pose = pose
@@ -488,5 +563,5 @@ class OSIMSequence():
             
         faces = self.template.faces
 
-        return self.to_numpy(verts), self.to_numpy(faces), markers, joints, joints_ori
+        return self.to_numpy(verts), self.to_numpy(faces), markers, joints, joints_ori, muscle_trajectory_dict
         
