@@ -64,6 +64,7 @@ def load_muscles(osim_path):
             parent_socket = point.getSocket('parent_frame')
             point_parent_frame = parent_socket.getConnecteePath()
 
+       
             point_locations.append(point_location)
             point_parent_frames.append(point_parent_frame)
         
@@ -224,15 +225,12 @@ class OSIMSequence():
         self.indices_dict = {}
         
         self.muscles_dict = load_muscles(self.osim_path)
-        for muscle_name, muscle_info in self.muscles_dict.items():
-            for point_ind in range(muscle_info['point_locations'].shape[0]):
-                parent_node = muscle_info['point_parent_frames'][point_ind].replace('/bodyset/','')
-                does_parent_exist = parent_node in self.node_names
-                if not does_parent_exist:        
-                    print(f"Can't find attachment for the {muscle_name}-{point_ind} parent node:{parent_node}, skipping")
+        
         
         
         self.generate_meshes_dict() # Populate self.meshes_dict and self.indices_dict
+        
+    
         self.create_template()
 
         # model markers
@@ -277,7 +275,7 @@ class OSIMSequence():
         current_index = 0
         self.indices_dict = {}
         self.meshes_dict = {}
-
+        
         node_names = self.node_names
         for node_name in node_names:
             mesh_list = []
@@ -318,14 +316,6 @@ class OSIMSequence():
                     # print(f'submesh_path: {submesh_path}, Nb vertices: {submesh.vertices.shape[0]}')
                     mesh_list.append(submesh)
                     
-                    # Update muscle info with the new location and scale. 
-                    for muscle_name, muscle_info in self.muscles_dict.items():
-                        for point_ind in range(muscle_info['point_locations'].shape[0]):
-                            is_body_parent = f'bodyset/{node_name}' in muscle_info['point_parent_frames'][point_ind]
-                            # print(is_body_parent)
-                            if is_body_parent:
-                                self.muscles_dict[muscle_name]['point_locations'][point_ind] = self.muscles_dict[muscle_name]['point_locations'][point_ind] * scale
-                                self.muscles_dict[muscle_name]['point_locations'][point_ind] += offset
 
             # Concatenate meshes
             if mesh_list:
@@ -340,7 +330,6 @@ class OSIMSequence():
             # Add to the dictionary
             self.meshes_dict[node_name] = node_mesh
         # print(self.meshes_dict)
-
 
     def create_template(self):
 
@@ -554,7 +543,14 @@ class OSIMSequence():
                         if f'bodyset/{node_name}' in self.muscles_dict[muscle_name]['point_parent_frames'][point_ind]:
                             muscle_trajectory_dict[muscle_name][frame_id, point_ind, :] = np.matmul(self.muscles_dict[muscle_name]['point_locations'][point_ind], transfo.rotation().T) + transfo.translation()
                     
-                        
+            # Since patella is not loaded by nimble physics, replace it with the knee joint
+            for muscle_name in muscle_trajectory_dict:
+                for point_ind in range(self.muscles_dict[muscle_name]['point_locations'].shape[0]):
+                    if 'patella_r' in self.muscles_dict[muscle_name]['point_parent_frames'][point_ind].lower():
+                        muscle_trajectory_dict[muscle_name][frame_id, point_ind, :] += joints[frame_id,2]
+                    if 'patella_l' in self.muscles_dict[muscle_name]['point_parent_frames'][point_ind].lower():
+                        muscle_trajectory_dict[muscle_name][frame_id, point_ind, :] += joints[frame_id,7]
+
 
 
             prev_verts = verts[frame_id]

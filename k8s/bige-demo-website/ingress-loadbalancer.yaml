@@ -1,0 +1,35 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: haproxy
+  name: bige25f-ingress
+spec:
+  rules:
+  - host: bige25f-chat.nrp-nautilus.io
+    http:
+      paths:
+      - backend:
+          service:
+            name: bige25f-service
+            port:
+              name: http
+        path: /
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - bige25f-chat.nrp-nautilus.io
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bige25f-service
+  labels:
+    app: bige
+spec:
+  selector:
+    app: bige
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8000
