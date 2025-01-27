@@ -397,4 +397,16 @@ Kubernetes syncthing setup manual steps:
 1. open syncthing everywhere 
 2. add devices everywhere 
 3. folder -> edit everywhere 
-    
+
+
+To run syncthing on the persistant volume
+```
+kubectl port-forward pod/data-transfer-pod 32000:8384
+```
+
+
+To extract muscle simulations 
+
+```
+
+```

@@ -61,9 +61,12 @@ spec:
       source /root/.bashrc
 
       conda activate T2M-GPT
-      pip install tqdm 
-      conda run -n T2M-GPT pip install tqdm
+      # conda run -n T2M-GPT pip install tqdm
 
+      cd /UCSD-OpenCap-Fitness-Dataset
+      git -c http.sslVerify=false  pull origin main
+      
+      
       # Link the data folder to the mounted data folder
       cd /T2M-GPT
       git -c http.sslVerify=false  pull origin main
@@ -72,8 +75,8 @@ spec:
 
       export PYTHONUNBUFFERED=1
 
-      cd /T2M-GPT/Examples
-      conda run -n T2M-GPT python surrogate_training.py 
+      conda run -n T2M-GPT python demo/nimble-gui.py visualize --geometry-folder /mnt/data/MCS_DATA/OpenCap_LaiArnoldModified2017_Geometry 
+      sleep 1000  
 
     env: 
     - name: SUBJECT_ID

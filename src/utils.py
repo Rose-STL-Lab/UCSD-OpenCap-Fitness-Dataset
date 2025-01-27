@@ -33,12 +33,12 @@ sys.path.extend([HOME_DIR,RABIT_DIR,STYLEGAN_DIR])
 
 
 ############################# FOLDER PATHS #######################################################
-if os.path.isdir(os.path.join(HOME_DIR,'MCS_DATA')): 
+if os.path.isdir('/mnt/data/MCS_DATA'):
+	DATA_DIR = '/mnt/data/MCS_DATA'
+elif os.path.isdir(os.path.join(HOME_DIR,'MCS_DATA')): 
     DATA_DIR = os.path.join(HOME_DIR,'MCS_DATA')
 elif os.path.isdir(os.path.join(HOME_DIR, '..', 'MCS_DATA')):
     DATA_DIR = os.path.join(HOME_DIR, '..', 'MCS_DATA')
-elif os.path.isdir(os.path.join(HOME_DIR,'data')): 
-    DATA_DIR = os.path.join(HOME_DIR,'data')
 else: 
     raise FileNotFoundError("Unable to find directory containing the MCS dataset")
 
