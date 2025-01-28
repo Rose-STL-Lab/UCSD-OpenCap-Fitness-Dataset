@@ -76,7 +76,7 @@ spec:
       export PYTHONUNBUFFERED=1
 
       conda run -n T2M-GPT python demo/nimble-gui.py visualize --geometry-folder /mnt/data/MCS_DATA/OpenCap_LaiArnoldModified2017_Geometry 
-      sleep 1000  
+      sleep 2000  
 
     env: 
     - name: SUBJECT_ID

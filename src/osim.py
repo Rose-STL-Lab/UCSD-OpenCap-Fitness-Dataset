@@ -42,7 +42,11 @@ def load_muscles(osim_path):
         else:
             osim_path = os.path.join(os.path.dirname(osim_path), better_osim_files[0])
 
-    import opensim
+    try: 
+        import opensim
+    except ImportError:
+        print("Uable to run opensim.")
+        return { }    
 
     lai_arnold = opensim.Model(osim_path)
     state = lai_arnold.initSystem()  # Initialize the system to get the state

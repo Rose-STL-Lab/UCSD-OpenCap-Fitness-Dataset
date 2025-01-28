@@ -29,6 +29,10 @@ rendered_videos/
 rgb_videos.zip
 
 
+k8s/digital-coach-yaml/
+
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
