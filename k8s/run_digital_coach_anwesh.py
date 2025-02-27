@@ -31,6 +31,8 @@ kind: Pod
 metadata:
   namespace: {namespace}
   name: digital-coach-{subject_id}
+  labels:
+    app: bige
 spec:
   affinity:
     nodeAffinity:
@@ -53,6 +55,11 @@ spec:
   - name: shubh-container
     image: gitlab-registry.nrp-nautilus.io/shmaheshwari/digital-coach-anwesh:latest
     imagePullPolicy: Always
+    ports:
+    - containerPort: 8000
+      protocol: TCP
+    - containerPort: 8070
+      protocol: TCP
     command: ["/bin/bash", "-c"]
     args: 
     - | 
@@ -74,9 +81,12 @@ spec:
       ln -sf /mnt/data/MCS_DATA/Data Data
 
       export PYTHONUNBUFFERED=1
-
-      conda run -n T2M-GPT python demo/nimble-gui.py visualize --geometry-folder /mnt/data/MCS_DATA/OpenCap_LaiArnoldModified2017_Geometry 
-      sleep 2000  
+      conda run -n T2M-GPT pip install networkx
+      conda run -n T2M-GPT python demo/nimble-gui.py visualize --geometry-folder /mnt/data/MCS_DATA/OpenCap_LaiArnoldModified2017_Geometry | tee bige-demo.log & 
+      sleep 60
+      lsof -i -P -n | grep LISTEN  
+      sleep 20000
+      cat bige-demo.log
 
     env: 
     - name: SUBJECT_ID

@@ -1,6 +1,6 @@
 import os 
 import tqdm
-
+import numpy as np 
 from motLoader import storage_to_dataframe, read_header
 
 
@@ -58,6 +58,7 @@ def load_simulation_data(mcs_sessions,data_path,surrogates=[]):
             
             
 
+            # Load activations predicted by some surrogate model
             for surrogate in surrogates:
                 surrogate_results_path = os.path.join(surrogate, f'{subject_name}-{trial_name}.mot')
                 if os.path.isfile(surrogate_results_path):
@@ -65,7 +66,7 @@ def load_simulation_data(mcs_sessions,data_path,surrogates=[]):
                     if len(mot_headers) == 0:
                         print(f"Unable to load surrogate headers for file:", subject_name,trial_name, surrogate_results_path)
                         continue 
-                    print("Headers:", mot_headers)
+                    # print("Headers:", mot_headers)
                     # Remove time from headers
                     mot_headers.remove('time')
 
@@ -76,11 +77,36 @@ def load_simulation_data(mcs_sessions,data_path,surrogates=[]):
 
                     surrogate_name = os.path.basename(surrogate).replace('.mot','')
                     trial['surrogate'][surrogate_name] = surrogate_data
-            
+
+            if 'torques' not in trial:
+                trial['torques'] = {}
+
+            for surrogate in ['simulation'] + surrogates:
+                print("See file:",os.path.join(simulation_results_path + '_' + os.path.basename(surrogate),trial_name, 'torques.npy'), os.path.exists(os.path.join(simulation_results_path + '_' + os.path.basename(surrogate),trial_name, 'torques.npy'))) 
+                if os.path.exists(os.path.join(simulation_results_path + '_' + os.path.basename(surrogate),trial_name, 'torques.npy')): 
+
+
+                    print("Loading torques for:", subject_name, trial_name)
+                    joint_torque = np.load(os.path.join(simulation_results_path + '_' + os.path.basename(surrogate),trial_name, 'torques.npy'),allow_pickle=True).item()
+
+                    opt = np.load(os.path.join(simulation_results_path + '_' + os.path.basename(surrogate),trial_name, 'optimaltrajectories.npy'),allow_pickle=True).item()
+                    bh_W = (opt['muscle_driven']['torques_BWht']/opt['muscle_driven']['torques'])[0][0]
+
+                    for joint in joint_torque:
+                        for t in joint_torque[joint]:
+                            if t == 'ID' or t == 'MT':
+                                joint_torque[joint][t] = joint_torque[joint][t] * bh_W
+
+                    surrogate_name = os.path.basename(surrogate).replace('.mot','')
+                    trial['torques'][surrogate_name] = joint_torque 
+                    # print(trial['torques'][surrogate_name]['hip_flexion_l']['MT'])
+
+                        
             if len(trial) > 0:
                 subject[trial_name] = trial        
                 print("Loaded data for:", subject_name, trial_name, "Kinetics:", subject[trial_name]['kinetics'].shape, "Kinematics:", subject[trial_name]['kinematics'].shape)            
-
+                # print("Surrogates:", trial['torques']['surrogate_quadruple_activations']['hip_flexion_l']['MT'])
+                # print("Surrogates:", trial['torques']['surrogate_double_activations']['hip_flexion_l']['MT'])
         if len(subject) > 0:
             subjects[subject_name] = subject
         else: 

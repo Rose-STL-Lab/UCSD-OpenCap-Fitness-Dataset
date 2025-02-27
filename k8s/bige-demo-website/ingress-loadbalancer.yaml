@@ -3,6 +3,9 @@ kind: Ingress
 metadata:
   annotations:
     kubernetes.io/ingress.class: haproxy
+    haproxy.org/ssl-redirect: "true"
+    haproxy.org/backend-proto: "h1"
+    haproxy.org/websocket-support: "true"
   name: bige25f-ingress
 spec:
   rules:
@@ -13,8 +16,15 @@ spec:
           service:
             name: bige25f-service
             port:
-              name: http
+              number: 8000
         path: /
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: bige25f-service
+            port:
+              number: 8070
+        path: /ws
         pathType: ImplementationSpecific
   tls:
   - hosts:
@@ -23,7 +33,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: bige25f-service
+  name: bige25f-service 
   labels:
     app: bige
 spec:
@@ -33,3 +43,8 @@ spec:
   - name: http
     protocol: TCP
     port: 8000
+    targetPort: 8000
+  - name: websocket
+    protocol: TCP
+    port: 8070
+    targetPort: 8070
