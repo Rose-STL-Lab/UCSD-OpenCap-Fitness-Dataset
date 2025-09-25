@@ -1,0 +1,79 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: syncthing-sport-analytics
+  namespace: ai-md
+  labels:
+    app: syncthing-sport-analytics
+spec:
+  containers:
+  - name: syncthing
+    image: syncthing/syncthing:latest
+    ports:
+    - containerPort: 8384  # Syncthing web GUI port
+    - containerPort: 22000 # Syncthing sync port
+    - containerPort: 21027 # Syncthing discovery port
+    env:
+    - name: DEVICE_ID
+      value: "${DEVICE_ID}"
+    volumeMounts:
+    - mountPath: /mnt/data
+      name: sport-analytics-volume
+    - mountPath: /var/syncthing/config
+      name: syncthing-config
+    command: ["/bin/sh"]
+    args: ["-c", "mkdir -p /mnt/data/SPORT_ANALYTICS && /bin/syncthing -home=/var/syncthing/config"]
+  volumes:
+  - name: sport-analytics-volume
+    persistentVolumeClaim:
+      claimName: sport-analytics
+  - name: syncthing-config
+    emptyDir: {}
+  restartPolicy: Always
+---
+apiVersion: v1
+kind: Service 
+metadata:
+  name: syncthing-sport-analytics-service
+  namespace: ai-md
+spec:
+  selector:
+    app: syncthing-sport-analytics
+  ports:
+    - protocol: TCP
+      port: 8384
+      targetPort: 8384
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: syncthing-sport-analytics-ignore
+  namespace: ai-md
+data:
+  .stignore: |
+    Datasets/AddBiomechanics/**
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: syncthing-sport-analytics-config
+  namespace: ai-md
+data:
+  config.xml: |
+    <configuration version="30">
+        <folder id="SPORT_ANALYTICS" label="SPORT_ANALYTICS" path="/mnt/data/SPORT_ANALYTICS" type="readwrite">
+            <filesystemType>basic</filesystemType>
+            <device id="${DEVICE_ID}"/>
+            <ignorePerms>false</ignorePerms>
+        </folder>
+        <device id="${DEVICE_ID}" name="SportAnalyticsKubernetesPod" compression="metadata" introducer="false" skipIntroductionRemovals="false">
+            <address>dynamic</address>
+            <paused>false</paused>
+            <autoAcceptFolders>false</autoAcceptFolders>
+            <maxSendKbps>0</maxSendKbps>
+            <maxRecvKbps>0</maxRecvKbps>
+            <maxRequestKiB>0</maxRequestKiB>
+            <untrusted>false</untrusted>
+        </device>
+    </configuration>
